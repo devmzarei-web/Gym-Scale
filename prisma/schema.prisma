@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Day {
+  SATURDAY
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+}
+
+enum Role {
+  SUPER_ADMIN
+  TRAINER
+  CLIENT
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  PENDING
+  CANCELLED
+}
+
+model Trainer {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  password        String   @default("$2a$10$e7eGfT3F...placeholder") // Bcrypt hash
+  phone           String?
+  avatarUrl       String?
+  bio             String?
+  role            Role     @default(TRAINER)
+  isDemo          Boolean  @default(false)
+  maxClients      Int?     @default(10) // Custom limit for demo trainers
+  canCreateDiets  Boolean  @default(true)
+  canCreateRoutines Boolean @default(true)
+  canAccessRecipes  Boolean @default(true)
+  expiresAt       DateTime? // Expiration date for demo access
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  clients       Client[]
+  routines      Routine[]
+  dietPlans     DietPlan[]
+  recipes       Recipe[]
+  subscriptions Subscription[]
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  trainerId String?
+  trainer   Trainer? @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+
+  name      String
+  email     String?  @unique
+  phone     String?
+  age       Int?
+  weight    Float?
+  height    Float?
+  goals     String?
+  notes     String?
+  photoUrls String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+  routineHistory ClientRoutineHistory[]
+  dietHistory    ClientDietHistory[]
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  clientId  String
+  client    Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  trainerId String
+  trainer   Trainer            @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  planName  String             // e.g. "برنامه ۱ ماهه VIP"
+  startDate DateTime
+  endDate   DateTime
+  status    SubscriptionStatus @default(ACTIVE)
+  price     Float?
+  notes     String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([clientId])
+  @@index([trainerId])
+}
+
+model Routine {
+  id          String   @id @default(cuid())
+  trainerId   String?
+  trainer     Trainer? @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+
+  title       String
+  description String?
+  isTemplate  Boolean  @default(true) // True for templates, False for assigned clones
+  
+  workoutDays  WorkoutDay[]
+  history      ClientRoutineHistory[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ClientRoutineHistory {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  routineId String
+  routine   Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([clientId])
+  @@index([routineId])
+}
+
+model DietPlan {
+  id          String   @id @default(cuid())
+  trainerId   String?
+  trainer     Trainer? @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+
+  title       String
+  description String?
+  content     String   // Rich HTML content of the diet plan
+  isTemplate  Boolean  @default(true) // True for templates, False for assigned clones
+
+  history     ClientDietHistory[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ClientDietHistory {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  dietPlanId String
+  dietPlan   DietPlan @relation(fields: [dietPlanId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([clientId])
+  @@index([dietPlanId])
+}
+
+model WorkoutDay {
+  id        String   @id @default(cuid())
+  routineId String
+  routine   Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  day       Day
+  label     String?  // e.g. "روز اول - سینه و سرشانه"
+  order     Int      @default(0)
+
+  exercises Exercise[]
+}
+
+model Exercise {
+  id                String     @id @default(cuid())
+  workoutDayId      String
+  workoutDay        WorkoutDay @relation(fields: [workoutDayId], references: [id], onDelete: Cascade)
+  name              String
+  muscleGroup       String?    // e.g. "سینه", "پشت"
+  sets              Int
+  repetitions       String     // e.g. "10-12", "تا ناتوانی"
+  restTime          String?    // e.g. "60 ثانیه"
+  weight            String?    // e.g. "80 کیلو"
+  customDescription String?
+  videoUrl          String?
+  order             Int        @default(0)
+}
+
+model ExerciseDictionary {
+  id          String   @id @default(cuid())
+  name        String
+  muscleGroup String
+  description String?
+  videoUrl    String?
+  createdAt   DateTime @default(now())
+}
+
+model Recipe {
+  id           String   @id @default(cuid())
+  trainerId    String?
+  trainer      Trainer? @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+
+  title        String
+  category     String   // e.g. "صبحانه", "میان وعده", "ناهار/شام", "پروتئینی"
+  prepTime     String?  // e.g. "15 دقیقه"
+  calories     Int?
+  protein      Float?   // grams
+  carbs        Float?   // grams
+  fats         Float?   // grams
+  ingredients  String   // Multiline or JSON ingredients list
+  instructions String   // Preparation steps
+  imageUrl     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
