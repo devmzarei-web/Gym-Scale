@@ -18,6 +18,8 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
+  Globe,
+  ExternalLink,
 } from "lucide-react"
 
 const SECURITY_QUESTIONS = [
@@ -145,17 +147,25 @@ function LoginForm() {
       if (!res.ok) {
         setRegError(data.error || "خطا در ثبت نام.")
       } else {
-        setRegSuccess("ثبت‌نام با موفقیت انجام شد! در حال انتقال به ورود...")
-        setTimeout(async () => {
-          // Auto login
-          await signIn("credentials", {
-            email: regEmail,
-            password: regPassword,
-            redirect: false,
-          })
-          router.push("/")
-          router.refresh()
-        }, 1500)
+        if (data.isPendingApproval) {
+          setRegSuccess(data.message || "ثبت‌نام شما با موفقیت دریافت شد و در انتظار تایید مدیریت ارشد قرار دارد.")
+          setTimeout(() => {
+            setActiveTab("login")
+            setRegSuccess("")
+          }, 4000)
+        } else {
+          setRegSuccess("ثبت‌نام با موفقیت انجام شد! در حال انتقال به ورود...")
+          setTimeout(async () => {
+            // Auto login for clients
+            await signIn("credentials", {
+              email: regEmail,
+              password: regPassword,
+              redirect: false,
+            })
+            router.push("/")
+            router.refresh()
+          }, 1500)
+        }
       }
     } catch (err: any) {
       setRegError("خطا در ارسال اطلاعات ثبت نام.")
@@ -239,7 +249,21 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[85vh] flex flex-col items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
+      {/* Top Banner Navigation to Main Landing Site */}
+      <div className="w-full max-w-lg mb-4 flex justify-between items-center">
+        <a
+          href="https://nutritrain.ir"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/90 border border-emerald-200 text-emerald-800 text-xs font-bold shadow-sm hover:bg-emerald-50 hover:border-emerald-400 transition-all group"
+        >
+          <Globe className="h-4 w-4 text-emerald-600 group-hover:rotate-12 transition-transform" />
+          <span>ورود به وب‌سایت اصلی NutriTrain.ir</span>
+          <ExternalLink className="h-3.5 w-3.5 text-emerald-500" />
+        </a>
+      </div>
+
       <div className="w-full max-w-lg space-y-6 bg-white/95 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-2xl transition-all">
         
         {/* Brand Header */}
@@ -497,7 +521,7 @@ function LoginForm() {
                   <option value="">بدون مربی (اشتراک خودکار / عمومی)</option>
                   {trainers.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.name} ({t.email})
+                      {t.name} (کد مربی: {t.trainerCode})
                     </option>
                   ))}
                 </select>

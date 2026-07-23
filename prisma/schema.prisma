@@ -38,6 +38,7 @@ model Trainer {
   avatarUrl         String?
   bio               String?
   role              Role      @default(TRAINER)
+  isApproved        Boolean   @default(true)
   securityQuestion  String?
   securityAnswer    String?
   isDemo            Boolean   @default(false)

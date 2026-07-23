@@ -41,6 +41,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
 
+        // Check if trainer account is approved by SuperAdmin
+        if (user.role === "TRAINER" && user.isApproved === false) {
+          throw new Error("حساب مربیگری شما در انتظار تایید مدیریت ارشد سیستم قرار دارد.")
+        }
+
         return {
           id: user.id,
           name: user.name,

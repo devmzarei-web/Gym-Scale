@@ -19,8 +19,8 @@ const navItems = [
 export function Navbar() {
   const pathname = usePathname()
 
-  // Do not render Navbar on PDF printable pages
-  if (pathname.includes("/pdf")) {
+  // Do not render Navbar on PDF printable pages or login page
+  if (pathname.includes("/pdf") || pathname === "/login") {
     return null
   }
 

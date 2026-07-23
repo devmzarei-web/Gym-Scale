@@ -1,13 +1,28 @@
 "use client"
 
 import { useState } from "react"
-import { Edit3, Trash2, X, Loader2, KeyRound } from "lucide-react"
-import { deleteTrainerAccount, updateTrainerAccount } from "@/app/actions/admin"
+import { Edit3, Trash2, X, Loader2, KeyRound, CheckCircle, XCircle } from "lucide-react"
+import { deleteTrainerAccount, updateTrainerAccount, toggleTrainerApproval } from "@/app/actions/admin"
 
 export function TrainerTableActions({ trainer }: { trainer: any }) {
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [approving, setApproving] = useState(false)
+
+  async function handleToggleApproval() {
+    const nextStatus = !trainer.isApproved
+    const actionName = nextStatus ? "تایید" : "تعلیق"
+    if (!confirm(`آیا از ${actionName} حساب مربی "${trainer.name}" اطمینان دارید؟`)) return
+    setApproving(true)
+    try {
+      await toggleTrainerApproval(trainer.id, nextStatus)
+    } catch (err: any) {
+      alert(err.message || "خطا در تغییر وضعیت حساب مربی")
+    } finally {
+      setApproving(false)
+    }
+  }
 
   async function handleDelete() {
     if (!confirm(`آیا از حذف حساب مربی "${trainer.name}" اطمینان دارید؟`)) return
@@ -39,7 +54,32 @@ export function TrainerTableActions({ trainer }: { trainer: any }) {
 
   return (
     <>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 justify-center">
+        <button
+          onClick={handleToggleApproval}
+          disabled={approving}
+          className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors ${
+            trainer.isApproved
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200"
+              : "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-emerald-600 hover:text-white"
+          }`}
+          title={trainer.isApproved ? "حساب فعال (کلیک برای تعلیق)" : "در انتظار تایید (کلیک برای تایید)"}
+        >
+          {approving ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : trainer.isApproved ? (
+            <>
+              <CheckCircle className="h-3 w-3 text-emerald-600" />
+              فعال
+            </>
+          ) : (
+            <>
+              <XCircle className="h-3 w-3 text-amber-700" />
+              تایید حساب
+            </>
+          )}
+        </button>
+
         <button
           onClick={() => setIsEditing(true)}
           className="p-1 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-slate-100 transition-colors"

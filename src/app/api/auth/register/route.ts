@@ -42,6 +42,7 @@ export async function POST(req: Request) {
           password: hashedPassword,
           phone: phone ? String(phone).trim() : null,
           role: "TRAINER",
+          isApproved: false, // Requires SuperAdmin approval
           securityQuestion: String(securityQuestion).trim(),
           securityAnswer: hashedSecurityAnswer,
           isDemo: false,
@@ -63,14 +64,20 @@ export async function POST(req: Request) {
       })
     }
 
+    const isPendingApproval = role === "TRAINER"
+
     return NextResponse.json(
       {
-        message: "ثبت‌نام با موفقیت انجام شد.",
+        message: isPendingApproval
+          ? "ثبت‌نام شما به‌عنوان مربی با موفقیت دریافت شد. حساب شما پس از بررسی و تایید مدیریت ارشد سیستم فعال خواهد شد."
+          : "ثبت‌نام با موفقیت انجام شد.",
+        isPendingApproval,
         user: {
           id: newUser.id,
           name: newUser.name,
           email: newUser.email,
           role: role === "TRAINER" ? "TRAINER" : "CLIENT",
+          isApproved: newUser.isApproved ?? true,
         },
       },
       { status: 201 }

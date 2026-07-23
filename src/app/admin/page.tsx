@@ -82,19 +82,27 @@ export default async function AdminPage() {
                     </td>
                     <td className="p-4 text-slate-600 font-mono text-[11px]">{t.email}</td>
                     <td className="p-4">
-                      {t.role === "SUPER_ADMIN" ? (
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                          مدیر ارشد
-                        </span>
-                      ) : t.isDemo ? (
-                        <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                          حساب دمو (آزمایشی)
-                        </span>
-                      ) : (
-                        <span className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-md">
-                          مربی اصلی
-                        </span>
-                      )}
+                      <div className="flex flex-col gap-1 items-start">
+                        {t.role === "SUPER_ADMIN" ? (
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                            مدیر ارشد
+                          </span>
+                        ) : t.isDemo ? (
+                          <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                            حساب دمو (آزمایشی)
+                          </span>
+                        ) : (
+                          <span className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-md">
+                            مربی اصلی
+                          </span>
+                        )}
+
+                        {!t.isApproved && t.role !== "SUPER_ADMIN" && (
+                          <span className="bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold px-1.5 py-0.5 rounded-md animate-pulse">
+                            در انتظار تایید مدیریت
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4 font-semibold">
                       {t.role === "SUPER_ADMIN" || !t.isDemo ? (

@@ -111,3 +111,13 @@ export async function assignClientToTrainer(clientId: string, trainerId: string 
   revalidatePath("/")
   return { success: true }
 }
+
+export async function toggleTrainerApproval(trainerId: string, isApproved: boolean) {
+  await prisma.trainer.update({
+    where: { id: trainerId },
+    data: { isApproved },
+  })
+
+  revalidatePath("/admin")
+  return { success: true }
+}
