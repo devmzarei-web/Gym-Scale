@@ -20,27 +20,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = String(credentials.email).trim()
         const password = String(credentials.password)
 
-        // Find trainer/user in DB
-        const trainer = await prisma.trainer.findUnique({
+        // Find trainer or client in DB
+        let user: any = await prisma.trainer.findUnique({
           where: { email },
         })
 
-        if (!trainer) {
+        if (!user) {
+          user = await prisma.client.findUnique({
+            where: { email },
+          })
+        }
+
+        if (!user || !user.password) {
           return null
         }
 
         // Compare password with hashed password
-        const isValid = await bcrypt.compare(password, trainer.password)
+        const isValid = await bcrypt.compare(password, user.password)
         if (!isValid) {
           return null
         }
 
         return {
-          id: trainer.id,
-          name: trainer.name,
-          email: trainer.email,
-          role: trainer.role,
-          isDemo: trainer.isDemo,
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role || "CLIENT",
+          isDemo: user.isDemo ?? false,
         } as any
       },
     }),

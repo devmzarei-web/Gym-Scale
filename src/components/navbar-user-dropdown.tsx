@@ -49,7 +49,16 @@ export function NavbarUserDropdown() {
             className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-emerald-700 transition-colors"
           >
             <LayoutDashboard className="h-4 w-4 text-emerald-600" />
-            داشبورد مربی
+            داشبورد اصلی
+          </Link>
+
+          <Link
+            href="/profile"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-emerald-700 transition-colors"
+          >
+            <User className="h-4 w-4 text-emerald-600" />
+            ویرایش پروفایل
           </Link>
 
           {isSuperAdmin && (

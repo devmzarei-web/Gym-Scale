@@ -129,6 +129,9 @@ async function main() {
     where: { role: 'SUPER_ADMIN' }
   })
 
+  const defaultQuestion = "نام اولین حیوان خانگی شما چیست؟"
+  const hashedAnswer = await bcrypt.hash('پیشی', 10)
+
   if (!existingSuperAdmin) {
     console.log('Creating SuperAdmin account...')
     await (prisma as any).trainer.create({
@@ -137,6 +140,8 @@ async function main() {
         email: adminEmail,
         password: hashedPassword,
         role: 'SUPER_ADMIN',
+        securityQuestion: defaultQuestion,
+        securityAnswer: hashedAnswer,
         isDemo: false,
         canCreateDiets: true,
         canCreateRoutines: true,
@@ -145,10 +150,14 @@ async function main() {
     })
     console.log(`SuperAdmin created successfully with email: ${adminEmail}`)
   } else {
-    console.log('Updating SuperAdmin password...')
+    console.log('Updating SuperAdmin password and security question...')
     await (prisma as any).trainer.update({
       where: { id: existingSuperAdmin.id },
-      data: { password: hashedPassword }
+      data: { 
+        password: hashedPassword,
+        securityQuestion: defaultQuestion,
+        securityAnswer: hashedAnswer
+      }
     })
     console.log('SuperAdmin password updated successfully to Number05$')
   }

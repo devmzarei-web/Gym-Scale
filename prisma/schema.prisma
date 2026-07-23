@@ -30,22 +30,24 @@ enum SubscriptionStatus {
 }
 
 model Trainer {
-  id              String   @id @default(cuid())
-  name            String
-  email           String   @unique
-  password        String   @default("$2a$10$e7eGfT3F...placeholder") // Bcrypt hash
-  phone           String?
-  avatarUrl       String?
-  bio             String?
-  role            Role     @default(TRAINER)
-  isDemo          Boolean  @default(false)
-  maxClients      Int?     @default(10) // Custom limit for demo trainers
-  canCreateDiets  Boolean  @default(true)
-  canCreateRoutines Boolean @default(true)
-  canAccessRecipes  Boolean @default(true)
-  expiresAt       DateTime? // Expiration date for demo access
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  password          String    @default("$2a$10$e7eGfT3F...placeholder") // Bcrypt hash
+  phone             String?
+  avatarUrl         String?
+  bio               String?
+  role              Role      @default(TRAINER)
+  securityQuestion  String?
+  securityAnswer    String?
+  isDemo            Boolean   @default(false)
+  maxClients        Int?      @default(10) // Custom limit for demo trainers
+  canCreateDiets    Boolean   @default(true)
+  canCreateRoutines Boolean   @default(true)
+  canAccessRecipes  Boolean   @default(true)
+  expiresAt         DateTime? // Expiration date for demo access
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   clients       Client[]
   routines      Routine[]
@@ -55,23 +57,27 @@ model Trainer {
 }
 
 model Client {
-  id        String   @id @default(cuid())
-  trainerId String?
-  trainer   Trainer? @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+  id               String   @id @default(cuid())
+  trainerId        String?
+  trainer          Trainer? @relation(fields: [trainerId], references: [id], onDelete: SetNull)
 
-  name      String
-  email     String?  @unique
-  phone     String?
-  age       Int?
-  weight    Float?
-  height    Float?
-  goals     String?
-  notes     String?
-  photoUrls String[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  name             String
+  email            String?  @unique
+  password         String?  // Bcrypt hash for client login
+  role             Role     @default(CLIENT)
+  securityQuestion String?
+  securityAnswer   String?
+  phone            String?
+  age              Int?
+  weight           Float?
+  height           Float?
+  goals            String?
+  notes            String?
+  photoUrls        String[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  subscriptions Subscription[]
+  subscriptions  Subscription[]
   routineHistory ClientRoutineHistory[]
   dietHistory    ClientDietHistory[]
 }

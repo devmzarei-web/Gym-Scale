@@ -8,6 +8,11 @@ export const authConfig: NextAuthConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
       const isOnLogin = nextUrl.pathname.startsWith("/login")
+      const isPublicApi = nextUrl.pathname.startsWith("/api/trainers/public")
+
+      if (isPublicApi) {
+        return true
+      }
 
       if (isOnLogin) {
         if (isLoggedIn) {
