@@ -63,6 +63,7 @@ export default async function AdminPage() {
               <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 text-[11px]">
                 <tr>
                   <th className="p-4">نام مربی</th>
+                  <th className="p-4">کد اختصاصی مربی</th>
                   <th className="p-4">ایمیل / شناسه</th>
                   <th className="p-4">نوع حساب</th>
                   <th className="p-4">سقف شاگردان</th>
@@ -79,6 +80,11 @@ export default async function AdminPage() {
                         {t.name.charAt(0)}
                       </div>
                       {t.name}
+                    </td>
+                    <td className="p-4 font-mono text-[11px]">
+                      <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-1 rounded-lg font-bold">
+                        {t.trainerCode || `NT-${t.id.slice(-4).toUpperCase()}`}
+                      </span>
                     </td>
                     <td className="p-4 text-slate-600 font-mono text-[11px]">{t.email}</td>
                     <td className="p-4">

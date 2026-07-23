@@ -8,15 +8,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const clientId = searchParams.get("clientId")
 
-    const diet = await prisma.dietPlan.findUnique({
+    const diet = await (prisma as any).dietPlan.findUnique({
       where: { id },
       include: {
         trainer: true,
-        history: {
-          take: 1,
-          include: { client: true },
-        },
       },
     })
 
@@ -24,15 +22,26 @@ export async function GET(
       return new NextResponse("برنامه تغذیه یافت نشد", { status: 404 })
     }
 
-    const client = diet.history[0]?.client
+    let client = null
+    if (clientId) {
+      client = await (prisma as any).client.findUnique({
+        where: { id: clientId },
+      })
+    }
+
     const trainer = diet.trainer
     const pdfBuffer = await generateDietPdfBuffer(diet, client, trainer)
+
+    const trainerName = (trainer?.name || "مربی").replace(/\s+/g, "_")
+    const clientOrTitle = (client?.name || diet.title).replace(/\s+/g, "_")
+    const dateStr = new Date(diet.createdAt).toLocaleDateString("fa-IR").replace(/\//g, "-")
+    const filename = `NutriTrain.ir-${trainerName}-${clientOrTitle}-${dateStr}.pdf`
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="Diet-${diet.id}.pdf"`,
+        "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       },
     })
   } catch (error: any) {

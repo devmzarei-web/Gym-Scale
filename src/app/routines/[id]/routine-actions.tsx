@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Download, Edit, Trash2, Loader2 } from "lucide-react"
 import { deleteRoutine } from "@/app/actions/routine"
 
-export function RoutineActions({ routineId }: { routineId: string }) {
+export function RoutineActions({ routineId, clientId }: { routineId: string; clientId?: string }) {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
   const [downloading, setDownloading] = useState(false)
@@ -14,15 +14,29 @@ export function RoutineActions({ routineId }: { routineId: string }) {
   async function handleDownloadPdf() {
     setDownloading(true)
     try {
-      const res = await fetch(`/api/routines/${routineId}/pdf`)
+      const urlPath = clientId
+        ? `/api/routines/${routineId}/pdf?clientId=${clientId}`
+        : `/api/routines/${routineId}/pdf`
+
+      const res = await fetch(urlPath)
       if (!res.ok) {
         throw new Error("خطا در تولید فایل PDF")
       }
+      
+      const contentDisposition = res.headers.get("Content-Disposition")
+      let fileName = `NutriTrain-Routine-${routineId}.pdf`
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i)
+        if (match && match[1]) {
+          fileName = decodeURIComponent(match[1].replace(/["']/g, ""))
+        }
+      }
+
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `Routine-${routineId}.pdf`
+      a.download = fileName
       document.body.appendChild(a)
       a.click()
       a.remove()

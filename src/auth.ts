@@ -17,17 +17,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
 
-        const email = String(credentials.email).trim()
+        const input = String(credentials.email).trim()
         const password = String(credentials.password)
 
-        // Find trainer or client in DB
-        let user: any = await prisma.trainer.findUnique({
-          where: { email },
+        // Find trainer or client in DB by email or phone
+        let user: any = await (prisma as any).trainer.findFirst({
+          where: {
+            OR: [
+              { email: input.toLowerCase() },
+              { phone: input },
+            ],
+          },
         })
 
         if (!user) {
-          user = await prisma.client.findUnique({
-            where: { email },
+          user = await (prisma as any).client.findFirst({
+            where: {
+              OR: [
+                { email: input.toLowerCase() },
+                { phone: input },
+              ],
+            },
           })
         }
 

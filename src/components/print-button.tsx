@@ -2,10 +2,23 @@
 
 import { Printer } from "lucide-react"
 
-export function PrintButton() {
+export function PrintButton({ fileName }: { fileName?: string }) {
+  function handlePrint() {
+    if (fileName && typeof document !== "undefined") {
+      const originalTitle = document.title
+      document.title = fileName
+      window.print()
+      setTimeout(() => {
+        document.title = originalTitle
+      }, 1000)
+    } else {
+      window.print()
+    }
+  }
+
   return (
     <button
-      onClick={() => window.print()}
+      onClick={handlePrint}
       className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs"
     >
       <Printer className="h-4 w-4" />

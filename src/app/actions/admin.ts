@@ -4,11 +4,17 @@ import { revalidatePath } from "next/cache"
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
 
+function generateDefaultTrainerCode() {
+  const num = Math.floor(1000 + Math.random() * 9000)
+  return `NT-${num}`
+}
+
 export async function createTrainerAccount(formData: FormData) {
   const name = formData.get("name") as string
   const email = formData.get("email") as string
   const password = formData.get("password") as string
   const phone = (formData.get("phone") as string) || null
+  const customCode = (formData.get("trainerCode") as string) || null
   const isDemo = formData.get("isDemo") === "on"
   const maxClients = formData.get("maxClients") ? parseInt(formData.get("maxClients") as string) : 10
   const canCreateDiets = formData.get("canCreateDiets") === "on"
@@ -28,6 +34,10 @@ export async function createTrainerAccount(formData: FormData) {
     throw new Error("مربی دیگری با این ایمیل در سیستم ثبت شده است.")
   }
 
+  const trainerCode = customCode && customCode.trim().length > 0
+    ? customCode.trim().toUpperCase()
+    : generateDefaultTrainerCode()
+
   const hashedPassword = await bcrypt.hash(password, 10)
 
   let expiresAt: Date | null = null
@@ -36,13 +46,15 @@ export async function createTrainerAccount(formData: FormData) {
     expiresAt.setDate(expiresAt.getDate() + durationDays)
   }
 
-  await prisma.trainer.create({
+  await (prisma as any).trainer.create({
     data: {
       name,
       email,
       password: hashedPassword,
       phone,
+      trainerCode,
       role: "TRAINER",
+      isApproved: true,
       isDemo,
       maxClients,
       canCreateDiets,
@@ -60,6 +72,7 @@ export async function updateTrainerAccount(trainerId: string, formData: FormData
   const name = formData.get("name") as string
   const phone = (formData.get("phone") as string) || null
   const password = (formData.get("password") as string) || null
+  const trainerCode = (formData.get("trainerCode") as string) || null
   const isDemo = formData.get("isDemo") === "on"
   const maxClients = formData.get("maxClients") ? parseInt(formData.get("maxClients") as string) : 10
   const canCreateDiets = formData.get("canCreateDiets") === "on"
@@ -76,11 +89,15 @@ export async function updateTrainerAccount(trainerId: string, formData: FormData
     canAccessRecipes,
   }
 
+  if (trainerCode && trainerCode.trim().length > 0) {
+    dataToUpdate.trainerCode = trainerCode.trim().toUpperCase()
+  }
+
   if (password && password.trim().length > 0) {
     dataToUpdate.password = await bcrypt.hash(password.trim(), 10)
   }
 
-  await prisma.trainer.update({
+  await (prisma as any).trainer.update({
     where: { id: trainerId },
     data: dataToUpdate,
   })
@@ -90,7 +107,7 @@ export async function updateTrainerAccount(trainerId: string, formData: FormData
 }
 
 export async function deleteTrainerAccount(trainerId: string) {
-  await prisma.trainer.delete({
+  await (prisma as any).trainer.delete({
     where: { id: trainerId },
   })
 
@@ -99,7 +116,7 @@ export async function deleteTrainerAccount(trainerId: string) {
 }
 
 export async function assignClientToTrainer(clientId: string, trainerId: string | null) {
-  await prisma.client.update({
+  await (prisma as any).client.update({
     where: { id: clientId },
     data: {
       trainerId: trainerId || null,
@@ -113,11 +130,16 @@ export async function assignClientToTrainer(clientId: string, trainerId: string 
 }
 
 export async function toggleTrainerApproval(trainerId: string, isApproved: boolean) {
-  await prisma.trainer.update({
-    where: { id: trainerId },
-    data: { isApproved },
-  })
+  try {
+    await (prisma as any).trainer.update({
+      where: { id: trainerId },
+      data: { isApproved },
+    })
 
-  revalidatePath("/admin")
-  return { success: true }
+    revalidatePath("/admin")
+    return { success: true }
+  } catch (err: any) {
+    console.error("Toggle trainer approval error:", err)
+    throw new Error("خطا در تغییر وضعیت تایید مربی.")
+  }
 }

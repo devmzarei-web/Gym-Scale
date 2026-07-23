@@ -8,18 +8,16 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const clientId = searchParams.get("clientId")
 
-    const routine = await prisma.routine.findUnique({
+    const routine = await (prisma as any).routine.findUnique({
       where: { id },
       include: {
         trainer: true,
         workoutDays: {
           include: { exercises: { orderBy: { order: "asc" } } },
           orderBy: { order: "asc" },
-        },
-        history: {
-          take: 1,
-          include: { client: true },
         },
       },
     })
@@ -28,15 +26,26 @@ export async function GET(
       return new NextResponse("برنامه تمرینی یافت نشد", { status: 404 })
     }
 
-    const client = routine.history[0]?.client
+    let client = null
+    if (clientId) {
+      client = await (prisma as any).client.findUnique({
+        where: { id: clientId },
+      })
+    }
+
     const trainer = routine.trainer
     const pdfBuffer = await generateRoutinePdfBuffer(routine, client, trainer)
+
+    const trainerName = (trainer?.name || "مربی").replace(/\s+/g, "_")
+    const clientOrTitle = (client?.name || routine.title).replace(/\s+/g, "_")
+    const dateStr = new Date(routine.createdAt).toLocaleDateString("fa-IR").replace(/\//g, "-")
+    const filename = `NutriTrain.ir-${trainerName}-${clientOrTitle}-${dateStr}.pdf`
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="Routine-${routine.id}.pdf"`,
+        "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       },
     })
   } catch (error: any) {

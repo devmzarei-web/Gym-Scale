@@ -3,25 +3,42 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Dumbbell, Utensils, Users, BookOpen, ChefHat, ShieldCheck } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { Dumbbell, Utensils, Users, BookOpen, ChefHat, ShieldCheck, Home, TrendingUp, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { NavbarUserDropdown } from "./navbar-user-dropdown"
 
-const navItems = [
+const trainerNavItems = [
   { href: "/clients", label: "شاگردان من", icon: Users },
+  { href: "/messages", label: "پیام‌ها", icon: MessageSquare },
   { href: "/routines", label: "برنامه‌های تمرینی", icon: Dumbbell },
   { href: "/diets", label: "برنامه‌های تغذیه", icon: Utensils },
   { href: "/exercises", label: "بانک حرکات", icon: BookOpen },
   { href: "/recipes", label: "دستورپخت‌ها", icon: ChefHat },
-  { href: "/admin", label: "مدیریت سیستم", icon: ShieldCheck },
+]
+
+const clientNavItems = [
+  { href: "/client", label: "داشبورد من", icon: Home },
+  { href: "/client/progress", label: "ثبت پیشرفت", icon: TrendingUp },
+  { href: "/client/messages", label: "پیام‌ها", icon: MessageSquare },
 ]
 
 export function Navbar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   // Do not render Navbar on PDF printable pages or login page
   if (pathname.includes("/pdf") || pathname === "/login") {
     return null
+  }
+
+  const role = (session?.user as any)?.role
+  const isClient = role === "CLIENT"
+  const isSuperAdmin = role === "SUPER_ADMIN"
+
+  let currentNavItems = isClient ? clientNavItems : [...trainerNavItems]
+  if (isSuperAdmin && !isClient) {
+    currentNavItems.push({ href: "/admin", label: "مدیریت سیستم", icon: ShieldCheck })
   }
 
   return (
@@ -29,7 +46,7 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         
         {/* Brand Logo Image */}
-        <Link href="/" className="flex items-center group">
+        <Link href={isClient ? "/client" : "/"} className="flex items-center group">
           <div className="relative h-10 w-44">
             <Image
               src="/NutriTrain.png"
@@ -43,9 +60,9 @@ export function Navbar() {
 
         {/* Navigation Links */}
         <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80">
-          {navItems.map((item) => {
+          {currentNavItems.map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+            const isActive = pathname === item.href || (item.href !== "/client" && item.href !== "/" && pathname.startsWith(item.href))
             return (
               <Link
                 key={item.href}

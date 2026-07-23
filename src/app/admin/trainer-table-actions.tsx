@@ -126,6 +126,17 @@ export function TrainerTableActions({ trainer }: { trainer: any }) {
               </div>
 
               <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">کد اختصاصی مربی (Trainer ID / Code)</label>
+                <input
+                  type="text"
+                  name="trainerCode"
+                  defaultValue={trainer.trainerCode || `NT-${trainer.id.slice(-4).toUpperCase()}`}
+                  placeholder="مثال: NT-1042 یا NT-ALIREZA"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:border-emerald-600"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">شماره تماس</label>
                 <input
                   type="text"

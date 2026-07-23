@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"
 
 export async function GET() {
   try {
-    const rawTrainers = await prisma.trainer.findMany({
+    const rawTrainers = await (prisma as any).trainer.findMany({
       where: {
         role: { not: "SUPER_ADMIN" },
         isApproved: true,
@@ -13,6 +13,7 @@ export async function GET() {
         name: true,
         bio: true,
         avatarUrl: true,
+        trainerCode: true,
       },
       orderBy: { name: "asc" },
     })
@@ -22,7 +23,7 @@ export async function GET() {
       name: t.name,
       bio: t.bio,
       avatarUrl: t.avatarUrl,
-      trainerCode: `NT-${t.id.slice(-4).toUpperCase()}`,
+      trainerCode: t.trainerCode || `NT-${t.id.slice(-4).toUpperCase()}`,
     }))
 
     return NextResponse.json({ trainers })

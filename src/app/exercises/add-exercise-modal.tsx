@@ -101,6 +101,16 @@ export function AddExerciseModal() {
               </div>
 
               <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">لینک GIF / تصویر متحرک آموزش (GIF URL)</label>
+                <input
+                  type="url"
+                  name="gifUrl"
+                  placeholder="https://example.com/exercise.gif"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600 transition-colors"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">لینک ویدیوی آموزش (آپارات / یوتیوب)</label>
                 <input
                   type="url"

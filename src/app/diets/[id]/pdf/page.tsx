@@ -44,24 +44,27 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
   const { id } = await params
   const search = searchParams ? await searchParams : {}
 
-  const diet = await prisma.dietPlan.findUnique({
+  const diet = await (prisma as any).dietPlan.findUnique({
     where: { id },
     include: {
-      history: {
-        take: 1,
-        include: { client: true },
-      },
+      trainer: true,
     },
   })
 
   if (!diet) return notFound()
 
-  let client = diet.history[0]?.client
-  if (!client && search?.clientId) {
-    client = await prisma.client.findUnique({
+  let client = null
+  if (search?.clientId) {
+    client = await (prisma as any).client.findUnique({
       where: { id: search.clientId },
-    }) as any
+    })
   }
+
+  // Generate suggested PDF filename: NutriTrain.ir-{trainer's name}-{client name if assigned if not diet title}-{date}
+  const trainerName = diet.trainer?.name ? diet.trainer.name.replace(/\s+/g, "_") : "مربی"
+  const clientOrTitle = client?.name ? client.name.replace(/\s+/g, "_") : diet.title.replace(/\s+/g, "_")
+  const dateStr = new Date(diet.createdAt).toLocaleDateString("fa-IR").replace(/\//g, "-")
+  const pdfFileName = `NutriTrain.ir-${trainerName}-${clientOrTitle}-${dateStr}`
 
   const logoBase64 = getBase64Asset("NutriTrain.png", "image/png")
   const vazirRegBase64 = getBase64Asset("fonts/Vazirmatn-Regular.woff2", "font/woff2")
@@ -201,13 +204,14 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
         }}
       />
 
+      <title>{pdfFileName}</title>
       {/* Top Action Bar (Hidden when printing) */}
       <div className="no-print bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-md">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold">
             <span className="text-teal-400">پیش‌نمایش سند برنامه تغذیه جهت پرینت و خروجی PDF</span>
           </div>
-          <PrintButton />
+          <PrintButton fileName={pdfFileName} />
         </div>
       </div>
 

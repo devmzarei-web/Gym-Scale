@@ -18,8 +18,8 @@ export async function POST(req: Request) {
     const cleanName = String(name).trim()
 
     // Check if email already exists in Trainer or Client
-    const existingTrainer = await prisma.trainer.findUnique({ where: { email: cleanEmail } })
-    const existingClient = await prisma.client.findUnique({ where: { email: cleanEmail } })
+    const existingTrainer = await (prisma as any).trainer.findUnique({ where: { email: cleanEmail } })
+    const existingClient = await (prisma as any).client.findUnique({ where: { email: cleanEmail } })
 
     if (existingTrainer || existingClient) {
       return NextResponse.json(
@@ -35,12 +35,14 @@ export async function POST(req: Request) {
     let newUser: any
 
     if (role === "TRAINER") {
-      newUser = await prisma.trainer.create({
+      const generatedCode = `NT-${Math.floor(1000 + Math.random() * 9000)}`
+      newUser = await (prisma as any).trainer.create({
         data: {
           name: cleanName,
           email: cleanEmail,
           password: hashedPassword,
           phone: phone ? String(phone).trim() : null,
+          trainerCode: generatedCode,
           role: "TRAINER",
           isApproved: false, // Requires SuperAdmin approval
           securityQuestion: String(securityQuestion).trim(),
@@ -50,7 +52,7 @@ export async function POST(req: Request) {
       })
     } else {
       // Default to CLIENT
-      newUser = await prisma.client.create({
+      newUser = await (prisma as any).client.create({
         data: {
           name: cleanName,
           email: cleanEmail,

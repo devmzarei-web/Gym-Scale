@@ -49,6 +49,7 @@ interface ExerciseItem {
   restTime: string
   weight: string
   customDescription: string
+  gifUrl?: string | null
 }
 
 interface DayItem {
@@ -59,7 +60,7 @@ interface DayItem {
 }
 
 interface RoutineBuilderProps {
-  exerciseDictionary: Array<{ id: string; name: string; muscleGroup: string }>
+  exerciseDictionary: Array<{ id: string; name: string; muscleGroup: string; gifUrl?: string | null }>
   clients: Array<{ id: string; name: string }>
   initialClientId?: string
   existingRoutine?: any
@@ -100,6 +101,7 @@ export function RoutineBuilderForm({
             restTime: ex.restTime || "",
             weight: ex.weight || "",
             customDescription: ex.customDescription || "",
+            gifUrl: ex.gifUrl || "",
           })),
         }))
       : [
@@ -118,6 +120,7 @@ export function RoutineBuilderForm({
                 restTime: "90 ثانیه",
                 weight: "",
                 customDescription: "",
+                gifUrl: "",
               },
             ],
           },
@@ -147,16 +150,17 @@ export function RoutineBuilderForm({
   }
 
   function handleRemoveDay(dayId: string) {
+    if (days.length <= 1) {
+      alert("حداقل یک روز تمرینی باید وجود داشته باشد.")
+      return
+    }
     setDays((prev) => prev.filter((d) => d.id !== dayId))
   }
 
   function handleAddExercise(dayId: string) {
-    const currentDay = days.find((d) => d.id === dayId)
-    // Inherit muscle group from last exercise in this day, or lastMuscleGroup
-    const defaultGroup =
-      currentDay && currentDay.exercises.length > 0
-        ? currentDay.exercises[currentDay.exercises.length - 1].muscleGroup
-        : lastMuscleGroup
+    const newExId = `ex-${Date.now()}`
+    const availableEx = exerciseDictionary.filter((dict) => dict.muscleGroup === lastMuscleGroup)
+    const firstDictItem = availableEx.length > 0 ? availableEx[0] : null
 
     setDays((prev) =>
       prev.map((d) => {
@@ -166,15 +170,16 @@ export function RoutineBuilderForm({
             exercises: [
               ...d.exercises,
               {
-                id: `ex-${Date.now()}-${Math.random()}`,
-                name: "",
-                muscleGroup: defaultGroup,
-                isCustom: false,
+                id: newExId,
+                name: firstDictItem ? firstDictItem.name : "",
+                muscleGroup: lastMuscleGroup,
+                isCustom: !firstDictItem,
                 sets: 3,
                 repetitions: "12",
                 restTime: "60 ثانیه",
                 weight: "",
                 customDescription: "",
+                gifUrl: firstDictItem?.gifUrl || "",
               },
             ],
           }
@@ -215,7 +220,14 @@ export function RoutineBuilderForm({
             ...d,
             exercises: d.exercises.map((ex) => {
               if (ex.id === exId) {
-                return { ...ex, [field]: value }
+                const updated = { ...ex, [field]: value }
+                if (field === "name" && !ex.isCustom) {
+                  const match = exerciseDictionary.find((dict) => dict.name === value)
+                  if (match && match.gifUrl) {
+                    updated.gifUrl = match.gifUrl
+                  }
+                }
+                return updated
               }
               return ex
             }),
@@ -250,6 +262,7 @@ export function RoutineBuilderForm({
             restTime: ex.restTime,
             weight: ex.weight,
             customDescription: ex.customDescription,
+            gifUrl: ex.gifUrl,
           })),
         })),
       }
@@ -580,6 +593,18 @@ export function RoutineBuilderForm({
                               }
                               placeholder="نکات اجرای حرکت، مکث..."
                               className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+                          <div className="col-span-2 sm:col-span-4">
+                            <label className="block text-[10px] font-bold text-emerald-700 mb-1">لینک GIF / تصویر متحرک آموزش (GIF URL)</label>
+                            <input
+                              type="url"
+                              value={ex.gifUrl || ""}
+                              onChange={(e) =>
+                                handleUpdateExercise(dayItem.id, ex.id, "gifUrl", e.target.value)
+                              }
+                              placeholder="https://example.com/exercise.gif (جهت نمایش انیمیشن حرکت به ورزشکار)"
+                              className="w-full bg-white border border-emerald-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600"
                             />
                           </div>
                         </div>

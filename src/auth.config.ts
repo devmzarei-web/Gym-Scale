@@ -7,15 +7,22 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
-      const isOnLogin = nextUrl.pathname.startsWith("/login")
-      const isPublicApi = nextUrl.pathname.startsWith("/api/trainers/public")
+      const role = (auth?.user as any)?.role
+      const pathname = nextUrl.pathname
 
-      if (isPublicApi) {
+      const isPublicApi = pathname.startsWith("/api/trainers/public")
+      const isAccessDenied = pathname.startsWith("/access-denied")
+      const isOnLogin = pathname.startsWith("/login")
+
+      if (isPublicApi || isAccessDenied) {
         return true
       }
 
       if (isOnLogin) {
         if (isLoggedIn) {
+          if (role === "CLIENT") {
+            return Response.redirect(new URL("/client", nextUrl))
+          }
           return Response.redirect(new URL("/", nextUrl))
         }
         return true
@@ -23,6 +30,38 @@ export const authConfig: NextAuthConfig = {
 
       if (!isLoggedIn) {
         return Response.redirect(new URL("/login", nextUrl))
+      }
+
+      // Role-Based Access Control (RBAC)
+      if (role === "TRAINER") {
+        // System administration is reserved exclusively for SUPER_ADMIN
+        if (pathname.startsWith("/admin")) {
+          return Response.redirect(new URL("/access-denied", nextUrl))
+        }
+      }
+
+      if (role === "CLIENT") {
+        const isPdfRoute = pathname.includes("/pdf")
+
+        if (isPdfRoute) {
+          return true
+        }
+
+        const isTrainerOrAdminRoute =
+          pathname.startsWith("/admin") ||
+          pathname.startsWith("/clients") ||
+          pathname.startsWith("/exercises") ||
+          pathname.startsWith("/recipes") ||
+          pathname.endsWith("/new") ||
+          pathname.endsWith("/edit")
+
+        if (isTrainerOrAdminRoute) {
+          return Response.redirect(new URL("/access-denied", nextUrl))
+        }
+
+        if (pathname === "/") {
+          return Response.redirect(new URL("/client", nextUrl))
+        }
       }
 
       return true

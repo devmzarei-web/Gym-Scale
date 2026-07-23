@@ -8,17 +8,19 @@ export async function createExerciseDictionaryItem(formData: FormData) {
   const muscleGroup = formData.get("muscleGroup") as string
   const description = (formData.get("description") as string) || null
   const videoUrl = (formData.get("videoUrl") as string) || null
+  const gifUrl = (formData.get("gifUrl") as string) || null
 
   if (!name || !muscleGroup) {
     throw new Error("نام حرکت و گروه عضله الزامی هستند.")
   }
 
-  await prisma.exerciseDictionary.create({
+  await (prisma as any).exerciseDictionary.create({
     data: {
       name,
       muscleGroup,
       description,
       videoUrl,
+      gifUrl,
     },
   })
 
@@ -31,14 +33,16 @@ export async function updateExerciseDictionaryItem(id: string, formData: FormDat
   const muscleGroup = formData.get("muscleGroup") as string
   const description = (formData.get("description") as string) || null
   const videoUrl = (formData.get("videoUrl") as string) || null
+  const gifUrl = (formData.get("gifUrl") as string) || null
 
-  await prisma.exerciseDictionary.update({
+  await (prisma as any).exerciseDictionary.update({
     where: { id },
     data: {
       name,
       muscleGroup,
       description,
       videoUrl,
+      gifUrl,
     },
   })
 

@@ -250,17 +250,30 @@ function LoginForm() {
 
   return (
     <div className="min-h-[85vh] flex flex-col items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
-      {/* Top Banner Navigation to Main Landing Site */}
-      <div className="w-full max-w-lg mb-4 flex justify-between items-center">
+      {/* Top Stylish Unique Navigation Banner to Main Landing Site */}
+      <div className="w-full max-w-lg mb-5 flex justify-center">
         <a
           href="https://nutritrain.ir"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/90 border border-emerald-200 text-emerald-800 text-xs font-bold shadow-sm hover:bg-emerald-50 hover:border-emerald-400 transition-all group"
+          className="group relative inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-slate-900/90 backdrop-blur-xl text-white text-xs font-bold shadow-xl hover:shadow-emerald-500/25 border border-slate-700/80 hover:border-emerald-500/60 hover:scale-[1.02] transition-all duration-300"
         >
-          <Globe className="h-4 w-4 text-emerald-600 group-hover:rotate-12 transition-transform" />
-          <span>ورود به وب‌سایت اصلی NutriTrain.ir</span>
-          <ExternalLink className="h-3.5 w-3.5 text-emerald-500" />
+          {/* Live pulse indicator */}
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-emerald-400 group-hover:rotate-12 transition-transform duration-300" />
+            <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent font-extrabold tracking-wide">
+              ورود به وب‌سایت اصلی NutriTrain.ir
+            </span>
+          </div>
+
+          <span className="bg-white/10 group-hover:bg-emerald-500/20 text-slate-300 group-hover:text-emerald-300 p-1.5 rounded-full transition-colors">
+            <ExternalLink className="h-3.5 w-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </span>
         </a>
       </div>
 

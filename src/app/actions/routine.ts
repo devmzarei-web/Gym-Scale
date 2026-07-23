@@ -3,18 +3,24 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 
-async function ensureExercisesInDictionary(exercises: Array<{ name: string; muscleGroup?: string }>) {
+async function ensureExercisesInDictionary(exercises: Array<{ name: string; muscleGroup?: string; gifUrl?: string | null }>) {
   for (const ex of exercises) {
     if (ex.name && ex.name.trim()) {
-      const existing = await prisma.exerciseDictionary.findFirst({
+      const existing = await (prisma as any).exerciseDictionary.findFirst({
         where: { name: ex.name.trim() },
       })
       if (!existing) {
-        await prisma.exerciseDictionary.create({
+        await (prisma as any).exerciseDictionary.create({
           data: {
             name: ex.name.trim(),
             muscleGroup: ex.muscleGroup || "سایر",
+            gifUrl: ex.gifUrl || null,
           },
+        })
+      } else if (ex.gifUrl && !existing.gifUrl) {
+        await (prisma as any).exerciseDictionary.update({
+          where: { id: existing.id },
+          data: { gifUrl: ex.gifUrl },
         })
       }
     }
@@ -37,6 +43,7 @@ export async function createRoutine(data: {
       restTime?: string
       weight?: string
       customDescription?: string
+      gifUrl?: string | null
     }>
   }>
 }) {
@@ -52,7 +59,7 @@ export async function createRoutine(data: {
   const allExercises = data.workoutDays.flatMap((wd) => wd.exercises)
   await ensureExercisesInDictionary(allExercises)
 
-  const routine = await prisma.routine.create({
+  const routine = await (prisma as any).routine.create({
     data: {
       title: data.title,
       description: data.description,
@@ -72,6 +79,7 @@ export async function createRoutine(data: {
               restTime: ex.restTime,
               weight: ex.weight,
               customDescription: ex.customDescription,
+              gifUrl: ex.gifUrl || null,
               order: exIdx,
             })),
           },
@@ -115,6 +123,7 @@ export async function updateRoutine(
         restTime?: string
         weight?: string
         customDescription?: string
+        gifUrl?: string | null
       }>
     }>
   }
@@ -129,7 +138,7 @@ export async function updateRoutine(
     where: { routineId },
   })
 
-  const routine = await prisma.routine.update({
+  const routine = await (prisma as any).routine.update({
     where: { id: routineId },
     data: {
       title: data.title,
@@ -149,6 +158,7 @@ export async function updateRoutine(
               restTime: ex.restTime,
               weight: ex.weight,
               customDescription: ex.customDescription,
+              gifUrl: ex.gifUrl || null,
               order: exIdx,
             })),
           },
@@ -174,16 +184,22 @@ export async function updateRoutine(
 }
 
 export async function assignExistingRoutineToClient(routineId: string, clientId: string) {
-  await prisma.clientRoutineHistory.create({
-    data: {
-      routineId,
-      clientId,
-    },
+  const existing = await (prisma as any).clientRoutineHistory.findFirst({
+    where: { routineId, clientId },
   })
+
+  if (!existing) {
+    await (prisma as any).clientRoutineHistory.create({
+      data: {
+        routineId,
+        clientId,
+      },
+    })
+  }
 
   revalidatePath(`/clients/${clientId}`)
   revalidatePath("/routines")
-  revalidatePath("/")
+  revalidatePath("/client")
   return { success: true }
 }
 

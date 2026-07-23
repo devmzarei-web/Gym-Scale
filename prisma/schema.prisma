@@ -39,6 +39,7 @@ model Trainer {
   bio               String?
   role              Role      @default(TRAINER)
   isApproved        Boolean   @default(true)
+  trainerCode       String?   @unique
   securityQuestion  String?
   securityAnswer    String?
   isDemo            Boolean   @default(false)
@@ -81,6 +82,51 @@ model Client {
   subscriptions  Subscription[]
   routineHistory ClientRoutineHistory[]
   dietHistory    ClientDietHistory[]
+  progressLogs   ClientProgressLog[]
+  workoutLogs    WorkoutSessionLog[]
+}
+
+model ClientProgressLog {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  weight    Float?
+  chest     Float?
+  waist     Float?
+  biceps    Float?
+  thigh     Float?
+  notes     String?
+  loggedAt  DateTime @default(now())
+
+  @@index([clientId])
+}
+
+model WorkoutSessionLog {
+  id                 String   @id @default(cuid())
+  clientId           String
+  client             Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  routineId          String?
+  dayLabel           String
+  durationMinutes    Int?
+  completedExercises Int      @default(0)
+  totalExercises     Int      @default(0)
+  notes              String?
+  completedAt        DateTime @default(now())
+
+  @@index([clientId])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  receiverId  String
+  senderRole  Role
+  content     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
 }
 
 model Subscription {
@@ -181,6 +227,7 @@ model Exercise {
   weight            String?    // e.g. "80 کیلو"
   customDescription String?
   videoUrl          String?
+  gifUrl            String?    // Direct GIF animation URL / preview
   order             Int        @default(0)
 }
 
@@ -190,6 +237,7 @@ model ExerciseDictionary {
   muscleGroup String
   description String?
   videoUrl    String?
+  gifUrl      String?  // Direct GIF animation URL / preview
   createdAt   DateTime @default(now())
 }
 

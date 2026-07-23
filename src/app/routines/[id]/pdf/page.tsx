@@ -31,30 +31,33 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
   const { id } = await params
   const search = searchParams ? await searchParams : {}
 
-  const routine = await prisma.routine.findUnique({
+  const routine = await (prisma as any).routine.findUnique({
     where: { id },
     include: {
+      trainer: true,
       workoutDays: {
         include: { exercises: { orderBy: { order: "asc" } } },
         orderBy: { order: "asc" },
-      },
-      history: {
-        take: 1,
-        include: { client: true },
       },
     },
   })
 
   if (!routine) return notFound()
 
-  let client = routine.history[0]?.client
-  if (!client && search?.clientId) {
-    client = await prisma.client.findUnique({
+  let client = null
+  if (search?.clientId) {
+    client = await (prisma as any).client.findUnique({
       where: { id: search.clientId },
-    }) as any
+    })
   }
 
   const routineWithClient = { ...routine, client }
+
+  // Generate suggested PDF filename: NutriTrain.ir-{trainer's name}-{client name if assigned if not routine title}-{date}
+  const trainerName = routine.trainer?.name ? routine.trainer.name.replace(/\s+/g, "_") : "مربی"
+  const clientOrTitle = client?.name ? client.name.replace(/\s+/g, "_") : routine.title.replace(/\s+/g, "_")
+  const dateStr = new Date(routine.createdAt).toLocaleDateString("fa-IR").replace(/\//g, "-")
+  const pdfFileName = `NutriTrain.ir-${trainerName}-${clientOrTitle}-${dateStr}`
 
   // Smart chunking for PDF pages
   const MAX_PAGE_HEIGHT = 960
@@ -163,13 +166,14 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
         }}
       />
 
+      <title>{pdfFileName}</title>
       {/* Top Action Bar (Hidden when printing) */}
       <div className="no-print bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-md">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold">
             <span className="text-emerald-400">پیش‌نمایش سند برنامه تمرینی جهت پرینت و خروجی PDF</span>
           </div>
-          <PrintButton />
+          <PrintButton fileName={pdfFileName} />
         </div>
       </div>
 

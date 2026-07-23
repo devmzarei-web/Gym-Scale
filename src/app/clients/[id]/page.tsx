@@ -22,7 +22,7 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
   const user = session?.user
   const isSuperAdmin = (user as any)?.role === "SUPER_ADMIN"
 
-  const client = await prisma.client.findUnique({
+  const client: any = await (prisma as any).client.findUnique({
     where: { id },
     include: {
       subscriptions: {
@@ -43,6 +43,10 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
       dietHistory: {
         orderBy: { createdAt: "desc" },
         include: { dietPlan: true }
+      },
+      workoutLogs: {
+        orderBy: { completedAt: "desc" },
+        take: 10,
       }
     }
   })
@@ -232,13 +236,23 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                 <p className="text-xs text-slate-600">{currentRoutine.description}</p>
               )}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                <Link
-                  href={`/routines/${currentRoutine.id}`}
-                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
-                >
-                  مشاهده جزئیات
-                  <ArrowRight className="h-3.5 w-3.5 rotate-180" />
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/routines/${currentRoutine.id}`}
+                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                  >
+                    مشاهده جزئیات
+                    <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                  </Link>
+
+                  <a
+                    href={`/api/routines/${currentRoutine.id}/pdf?clientId=${client.id}`}
+                    download
+                    className="text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg transition-all"
+                  >
+                    دانلود مستقیم PDF شاگرد
+                  </a>
+                </div>
 
                 <RoutineActions routineId={currentRoutine.id} />
               </div>
@@ -282,13 +296,23 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                 <p className="text-xs text-slate-600">{currentDiet.description}</p>
               )}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                <Link
-                  href={`/diets/${currentDiet.id}`}
-                  className="text-xs font-bold text-teal-600 hover:text-teal-700 flex items-center gap-1"
-                >
-                  مشاهده جزئیات
-                  <ArrowRight className="h-3.5 w-3.5 rotate-180" />
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/diets/${currentDiet.id}`}
+                    className="text-xs font-bold text-teal-600 hover:text-teal-700 flex items-center gap-1"
+                  >
+                    مشاهده جزئیات
+                    <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                  </Link>
+
+                  <a
+                    href={`/api/diets/${currentDiet.id}/pdf?clientId=${client.id}`}
+                    download
+                    className="text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg transition-all"
+                  >
+                    دانلود مستقیم PDF شاگرد
+                  </a>
+                </div>
 
                 <DietActions dietId={currentDiet.id} />
               </div>
@@ -300,6 +324,43 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
           )}
         </div>
 
+      </div>
+
+      {/* Completed Workout History */}
+      <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-xs">
+        <h2 className="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
+          <Dumbbell className="h-4 w-4 text-emerald-600" />
+          تاریخچه تمرینات انجام شده توسط شاگرد
+        </h2>
+
+        {!client.workoutLogs || client.workoutLogs.length === 0 ? (
+          <p className="text-xs text-slate-500">شاگرد هنوز در حالت تمرین زنده تمرینی ثبت نکرده است.</p>
+        ) : (
+          <div className="space-y-2">
+            {client.workoutLogs.map((wLog: any) => (
+              <div
+                key={wLog.id}
+                className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900">{wLog.dayLabel}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {new Date(wLog.completedAt).toLocaleDateString("fa-IR")}
+                    </span>
+                  </div>
+                  {wLog.notes && <p className="text-[11px] text-slate-500">{wLog.notes}</p>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-bold text-slate-600">{wLog.durationMinutes || 0} دقیقه</span>
+                  <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                    {wLog.completedExercises} از {wLog.totalExercises} حرکت
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Subscription History */}

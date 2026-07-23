@@ -79,16 +79,28 @@ export function AddTrainerModal() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    رمز عبور <span className="text-emerald-600">*</span>
+                    کد اختصاصی مربی (اختیاری)
                   </label>
                   <input
-                    type="password"
-                    name="password"
-                    required
-                    placeholder="••••••••"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600 transition-colors"
+                    type="text"
+                    name="trainerCode"
+                    placeholder="خودکار ساخته می‌شود یا دستی وارد کنید..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600 transition-colors"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  رمز عبور <span className="text-emerald-600">*</span>
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  placeholder="••••••••"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600 transition-colors"
+                />
               </div>
 
               {/* Demo Account Switch */}
