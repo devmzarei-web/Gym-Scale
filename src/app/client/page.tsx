@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 
 import { ClientRoutinesSection } from "./client-routines-section"
+import { FoodTrackerCard } from "@/components/food-tracker-card"
 
 export const revalidate = 0
 
@@ -216,6 +217,9 @@ export default async function ClientDashboardPage() {
           </p>
         </div>
       )}
+
+      {/* Calorie & Food Bank Tracker Component */}
+      <FoodTrackerCard />
 
       {/* Grid Section 2: Physical Metrics & Assigned Trainer */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

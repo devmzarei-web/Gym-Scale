@@ -161,6 +161,41 @@ async function main() {
     })
     console.log('SuperAdmin password updated successfully to Number05$')
   }
+
+  // Seed Predefined Food Bank
+  console.log('Seeding predefined food dictionary...')
+  const initialFoods = [
+    { name: "سینه مرغ پخته شده", category: "پروتئینی", unitLabel: "100 گرم", calories: 165, protein: 31, carbs: 0, fats: 3.6 },
+    { name: "فیله گوساله پخته", category: "پروتئینی", unitLabel: "100 گرم", calories: 215, protein: 26, carbs: 0, fats: 11 },
+    { name: "تخم‌مرغ کامل (آب‌پز)", category: "پروتئینی", unitLabel: "1 عدد (50 گرم)", calories: 78, protein: 6.3, carbs: 0.6, fats: 5.3 },
+    { name: "سفیده تخم‌مرغ", category: "پروتئینی", unitLabel: "1 عدد (33 گرم)", calories: 17, protein: 3.6, carbs: 0.2, fats: 0.1 },
+    { name: "تن ماهی در روغن (آبکش شده)", category: "پروتئینی", unitLabel: "100 گرم", calories: 198, protein: 29, carbs: 0, fats: 8 },
+    { name: "پروتئین وی (Whey)", category: "مکمل / پروتئین", unitLabel: "1 اسکوپ (30 گرم)", calories: 120, protein: 24, carbs: 2, fats: 1.5 },
+    { name: "برنج کته (پخته شده)", category: "کربوهیدرات", unitLabel: "100 گرم", calories: 130, protein: 2.7, carbs: 28, fats: 0.3 },
+    { name: "نان سنگک", category: "کربوهیدرات", unitLabel: "1 کف دست (30 گرم)", calories: 75, protein: 2.5, carbs: 15, fats: 0.5 },
+    { name: "نان جو", category: "کربوهیدرات", unitLabel: "1 کف دست (30 گرم)", calories: 70, protein: 2.2, carbs: 14, fats: 0.4 },
+    { name: "سیب‌زمینی آب‌پز", category: "کربوهیدرات", unitLabel: "100 گرم", calories: 87, protein: 1.9, carbs: 20, fats: 0.1 },
+    { name: "جو دوسر (Oats)", category: "کربوهیدرات", unitLabel: "50 گرم", calories: 190, protein: 6.5, carbs: 33, fats: 3.5 },
+    { name: "موز تازه", category: "میوه", unitLabel: "1 عدد متوسط (115 گرم)", calories: 105, protein: 1.3, carbs: 27, fats: 0.3 },
+    { name: "سیب درختی", category: "میوه", unitLabel: "1 عدد متوسط (150 گرم)", calories: 77, protein: 0.4, carbs: 21, fats: 0.2 },
+    { name: "کره بادام زمینی", category: "چربی مفید", unitLabel: "1 قاشق غذاخوری (16 گرم)", calories: 95, protein: 4, carbs: 3, fats: 8 },
+    { name: "روغن زیتون", category: "چربی مفید", unitLabel: "1 قاشق غذاخوری (14 گرم)", calories: 119, protein: 0, carbs: 0, fats: 13.5 },
+    { name: "مغز گردو", category: "چربی مفید / آجیل", unitLabel: "30 گرم (حدود 6 عدد)", calories: 195, protein: 4.5, carbs: 4, fats: 19 },
+    { name: "بادام درختی", category: "چربی مفید / آجیل", unitLabel: "30 گرم", calories: 170, protein: 6, carbs: 6, fats: 15 },
+    { name: "پنیر کم‌چرب (لاکتیو)", category: "لبنیات", unitLabel: "50 گرم", calories: 85, protein: 8, carbs: 1.5, fats: 4 },
+    { name: "ماست یونانی کم‌چرب", category: "لبنیات", unitLabel: "100 گرم", calories: 59, protein: 10, carbs: 3.6, fats: 0.4 },
+    { name: "شیر کم‌چرب", category: "لبنیات", unitLabel: "1 لیوان (240 میلی‌لیتر)", calories: 102, protein: 8, carbs: 12, fats: 2.4 },
+  ]
+
+  for (const food of initialFoods) {
+    const exists = await (prisma as any).foodDictionary.findFirst({
+      where: { name: food.name }
+    })
+    if (!exists) {
+      await (prisma as any).foodDictionary.create({ data: food })
+    }
+  }
+  console.log('Food dictionary seeded successfully!')
 }
 
 main()

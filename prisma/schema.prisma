@@ -96,6 +96,7 @@ model Client {
   dietHistory    ClientDietHistory[]
   progressLogs   ClientProgressLog[]
   workoutLogs    WorkoutSessionLog[]
+  foodLogs       ClientFoodLog[]
 }
 
 model ClientProgressLog {
@@ -123,6 +124,7 @@ model WorkoutSessionLog {
   completedExercises Int      @default(0)
   totalExercises     Int      @default(0)
   notes              String?
+  setDetails         String?  // JSON string containing set-by-set weight and reps
   completedAt        DateTime @default(now())
 
   @@index([clientId])
@@ -273,3 +275,33 @@ model Recipe {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model FoodDictionary {
+  id          String   @id @default(cuid())
+  name        String   // e.g. "سینه مرغ پخته"
+  category    String   // e.g. "پروتئینی", "کربوهیدرات", "چربی", "میوه و سبزیجات"
+  unitLabel   String   @default("100 گرم")
+  calories    Float    // kcal per unit
+  protein     Float    // grams
+  carbs       Float    // grams
+  fats        Float    // grams
+  createdAt   DateTime @default(now())
+}
+
+model ClientFoodLog {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  foodName    String
+  mealType    String   // e.g. "BREAKFAST", "LUNCH", "DINNER", "SNACK"
+  amount      Float    @default(1) // multiplier of unit
+  unitLabel   String   @default("100 گرم")
+  calories    Float
+  protein     Float
+  carbs       Float
+  fats        Float
+  loggedAt    DateTime @default(now())
+
+  @@index([clientId])
+}
+

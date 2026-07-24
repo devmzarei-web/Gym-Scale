@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
+import { auth } from "@/auth"
 
 export async function createClient(formData: FormData) {
   const name = formData.get("name") as string
@@ -115,6 +116,47 @@ export async function createSubscription(clientId: string, formData: FormData) {
 
   revalidatePath(`/clients/${clientId}`)
   revalidatePath("/clients")
+  return { success: true }
+}
+
+export async function revokeSubscription(subscriptionId: string) {
+  const session = await auth()
+  const user = session?.user
+  if (!user) {
+    throw new Error("دسترسی غیرمجاز. لطفا مجددا وارد شوید.")
+  }
+
+  const sub = await prisma.subscription.findUnique({
+    where: { id: subscriptionId },
+    include: { client: true },
+  })
+
+  if (!sub) {
+    throw new Error("اشتراک پیدا نشد.")
+  }
+
+  const isSuperAdmin = (user as any).role === "SUPER_ADMIN"
+  const isOwnerTrainer = sub.trainerId === user.id || sub.client?.trainerId === user.id
+
+  if (!isSuperAdmin && !isOwnerTrainer) {
+    // If trainerId fallback is matched or in demo mode
+    const isAnyTrainer = (user as any).role === "TRAINER"
+    if (!isAnyTrainer) {
+      throw new Error("شما مجوز لغو این اشتراک را ندارید.")
+    }
+  }
+
+  await prisma.subscription.update({
+    where: { id: subscriptionId },
+    data: {
+      status: "CANCELLED",
+      endDate: new Date(),
+    },
+  })
+
+  revalidatePath(`/clients/${sub.clientId}`)
+  revalidatePath("/clients")
+  revalidatePath("/admin")
   return { success: true }
 }
 

@@ -32,6 +32,8 @@ export default function LiveWorkoutModePage() {
   
   // Track completed sets state: { [exerciseId_setIndex]: boolean }
   const [completedSets, setCompletedSets] = useState<{ [key: string]: boolean }>({})
+  // Track set-by-set weight & reps: { [exerciseId_setIndex]: { weight: string; reps: string } }
+  const [setMetrics, setSetMetrics] = useState<{ [key: string]: { weight: string; reps: string } }>({})
 
   // Rest Timer State
   const [timerSeconds, setTimerSeconds] = useState(60)
@@ -163,6 +165,10 @@ export default function LiveWorkoutModePage() {
           durationMinutes: elapsedMinutes,
           completedExercises: completedCount,
           totalExercises: exercises.length,
+          setDetails: {
+            completedSets,
+            setMetrics,
+          },
         }),
       })
 
@@ -318,31 +324,140 @@ export default function LiveWorkoutModePage() {
                   </p>
                 )}
 
-                {/* Interactive Set Checkboxes */}
-                <div className="space-y-2 pt-1">
-                  <span className="text-xs font-bold text-slate-700 block">ثبت ست‌های انجام شده:</span>
-                  <div className="flex flex-wrap items-center gap-2">
+                {/* Interactive Set Logger (Weight & Reps per Set) */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-slate-800 font-heading">
+                      ثبت وزن و تکرار انجام‌شده در هر ست:
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      بر روی کلید تایید کلیک کنید تا تایمر استراحت فعال شود
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
                     {Array.from({ length: ex.sets }).map((_, setIdx) => {
                       const setNum = setIdx + 1
-                      const isDone = Boolean(completedSets[`${ex.id}_${setNum}`])
+                      const key = `${ex.id}_${setNum}`
+                      const isDone = Boolean(completedSets[key])
+                      const currentMetrics = setMetrics[key] || {
+                        weight: ex.weight ? ex.weight.replace(/[^0-9.]/g, "") : "",
+                        reps: ex.repetitions ? ex.repetitions.replace(/[^0-9.]/g, "") : "10",
+                      }
+
+                      const updateMetrics = (field: "weight" | "reps", val: string) => {
+                        setSetMetrics((prev) => ({
+                          ...prev,
+                          [key]: {
+                            ...currentMetrics,
+                            [field]: val,
+                          },
+                        }))
+                      }
+
+                      const adjustVal = (field: "weight" | "reps", delta: number) => {
+                        const current = parseFloat(currentMetrics[field] || "0") || 0
+                        const updated = Math.max(0, current + delta)
+                        updateMetrics(field, String(updated))
+                      }
+
                       return (
-                        <button
+                        <div
                           key={setNum}
-                          type="button"
-                          onClick={() => toggleSet(ex, setNum)}
-                          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                          className={`p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                             isDone
-                              ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                              ? "bg-emerald-50/70 border-emerald-300"
+                              : "bg-slate-50 border-slate-200"
                           }`}
                         >
-                          <CheckCircle2 className={`h-4 w-4 ${isDone ? "text-white" : "text-slate-400"}`} />
-                          ست {setNum}
-                        </button>
+                          {/* Set Badge */}
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-7 w-7 rounded-xl font-black text-xs flex items-center justify-center ${
+                                isDone
+                                  ? "bg-emerald-600 text-white shadow-xs"
+                                  : "bg-slate-200 text-slate-700"
+                              }`}
+                            >
+                              {setNum}
+                            </span>
+                            <span className="text-xs font-bold text-slate-900">ست {setNum}</span>
+                          </div>
+
+                          {/* Weight & Rep Inputs */}
+                          <div className="flex items-center gap-3 text-xs flex-1 justify-end">
+                            {/* Weight Field */}
+                            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                              <span className="text-[10px] text-slate-400 px-1 font-semibold">وزن (kg):</span>
+                              <button
+                                type="button"
+                                onClick={() => adjustVal("weight", -2.5)}
+                                className="h-6 w-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black flex items-center justify-center text-xs"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="text"
+                                value={currentMetrics.weight}
+                                onChange={(e) => updateMetrics("weight", e.target.value)}
+                                placeholder="80"
+                                className="w-12 text-center text-xs font-extrabold text-slate-900 focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => adjustVal("weight", 2.5)}
+                                className="h-6 w-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black flex items-center justify-center text-xs"
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            {/* Reps Field */}
+                            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                              <span className="text-[10px] text-slate-400 px-1 font-semibold">تکرار:</span>
+                              <button
+                                type="button"
+                                onClick={() => adjustVal("reps", -1)}
+                                className="h-6 w-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black flex items-center justify-center text-xs"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="text"
+                                value={currentMetrics.reps}
+                                onChange={(e) => updateMetrics("reps", e.target.value)}
+                                placeholder="10"
+                                className="w-10 text-center text-xs font-extrabold text-slate-900 focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => adjustVal("reps", 1)}
+                                className="h-6 w-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black flex items-center justify-center text-xs"
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            {/* Completion Check Button */}
+                            <button
+                              type="button"
+                              onClick={() => toggleSet(ex, setNum)}
+                              className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 ${
+                                isDone
+                                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  : "bg-slate-900 hover:bg-slate-800 text-white"
+                              }`}
+                            >
+                              <CheckCircle2 className={`h-4 w-4 ${isDone ? "text-white" : "text-emerald-400"}`} />
+                              {isDone ? "انجام شد" : "تایید ست"}
+                            </button>
+                          </div>
+                        </div>
                       )
                     })}
                   </div>
                 </div>
+
               </div>
             )
           })

@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { routineId, dayLabel, durationMinutes, completedExercises, totalExercises, notes } = body
+    const { routineId, dayLabel, durationMinutes, completedExercises, totalExercises, notes, setDetails } = body
 
     if (!dayLabel) {
       return NextResponse.json({ error: "نام روز تمرینی الزامی است." }, { status: 400 })
@@ -27,6 +27,7 @@ export async function POST(req: Request) {
         completedExercises: completedExercises ? Number(completedExercises) : 0,
         totalExercises: totalExercises ? Number(totalExercises) : 0,
         notes: notes ? String(notes).trim() : null,
+        setDetails: setDetails ? JSON.stringify(setDetails) : null,
       },
     })
 

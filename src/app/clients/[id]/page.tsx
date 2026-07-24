@@ -12,6 +12,7 @@ import { AssignDietModal } from "./assign-diet-modal"
 import { TdeeCalculatorModal } from "@/components/tdee-calculator-modal"
 import { ClientProgressChart } from "@/components/client-progress-chart"
 import { ProgressPhotoGallery } from "@/components/progress-photo-gallery"
+import { RevokeSubscriptionButton } from "./revoke-subscription-button"
 
 export const revalidate = 0
 
@@ -400,11 +401,18 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                   {sub.price && <span className="font-bold text-slate-700">{sub.price.toLocaleString("fa-IR")} تومان</span>}
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                      sub.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-200 text-slate-600"
+                      sub.status === "ACTIVE"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : sub.status === "CANCELLED"
+                        ? "bg-slate-100 text-slate-600 border border-slate-300"
+                        : "bg-rose-50 text-rose-700 border border-rose-200"
                     }`}
                   >
-                    {sub.status === "ACTIVE" ? "فعال" : "منقضی شده"}
+                    {sub.status === "ACTIVE" ? "فعال" : sub.status === "CANCELLED" ? "لغو شده" : "منقضی شده"}
                   </span>
+                  {sub.status === "ACTIVE" && (
+                    <RevokeSubscriptionButton subscriptionId={sub.id} planName={sub.planName} />
+                  )}
                 </div>
               </div>
             ))}

@@ -69,6 +69,7 @@ export function DietBuilderForm({
   const [isTemplate, setIsTemplate] = useState(
     existingDiet ? existingDiet.isTemplate : !initialClientId
   )
+  const [builderMode, setBuilderMode] = useState<"standard" | "macro">("standard")
 
   // Initialize sections from existingDiet HTML if present, or default template
   const [sections, setSections] = useState<MealSection[]>(() => {
@@ -447,6 +448,34 @@ export function DietBuilderForm({
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           ذخیره برنامه تغذیه
+        </button>
+      </div>
+
+      {/* Mode Switcher Tab Bar */}
+      <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 text-xs">
+        <button
+          type="button"
+          onClick={() => setBuilderMode("standard")}
+          className={`flex-1 py-2.5 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+            builderMode === "standard"
+              ? "bg-white text-teal-700 shadow-sm border border-slate-200"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <FileText className="h-4 w-4 text-teal-600" />
+          طراحی استاندارد (جدول و متن آزاد)
+        </button>
+        <button
+          type="button"
+          onClick={() => setBuilderMode("macro")}
+          className={`flex-1 py-2.5 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+            builderMode === "macro"
+              ? "bg-white text-teal-700 shadow-sm border border-slate-200"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <Sparkles className="h-4 w-4 text-amber-500" />
+          طراحی پیشرفته ماکرویی (محاسبه دقیق کالری و ارزش غذایی)
         </button>
       </div>
 
