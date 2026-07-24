@@ -29,6 +29,16 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum ExerciseGroupType {
+  NORMAL
+  SUPERSET
+  TRISET
+  CIRCUIT
+  DROPSET
+  REST_PAUSE
+  TEMPO
+}
+
 model Trainer {
   id                String    @id @default(cuid())
   name              String
@@ -76,6 +86,8 @@ model Client {
   goals            String?
   notes            String?
   photoUrls        String[]
+  isDeleted        Boolean  @default(false)
+  deletedAt        DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -229,6 +241,8 @@ model Exercise {
   videoUrl          String?
   gifUrl            String?    // Direct GIF animation URL / preview
   order             Int        @default(0)
+  groupType         ExerciseGroupType @default(NORMAL)
+  groupId           String?    // Shared ID to link exercises in a superset/triset
 }
 
 model ExerciseDictionary {

@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"
 
 export async function GET() {
   try {
-    const rawTrainers = await (prisma as any).trainer.findMany({
+    const rawTrainers = await prisma.trainer.findMany({
       where: {
         role: { not: "SUPER_ADMIN" },
         isApproved: true,

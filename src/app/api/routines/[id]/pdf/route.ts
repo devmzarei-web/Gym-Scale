@@ -11,10 +11,15 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const clientId = searchParams.get("clientId")
 
-    const routine = await (prisma as any).routine.findUnique({
+    const routine = await prisma.routine.findUnique({
       where: { id },
       include: {
         trainer: true,
+        history: {
+          include: { client: true },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
         workoutDays: {
           include: { exercises: { orderBy: { order: "asc" } } },
           orderBy: { order: "asc" },
@@ -26,9 +31,9 @@ export async function GET(
       return new NextResponse("برنامه تمرینی یافت نشد", { status: 404 })
     }
 
-    let client = null
+    let client: any = null
     if (clientId) {
-      client = await (prisma as any).client.findUnique({
+      client = await prisma.client.findUnique({
         where: { id: clientId },
       })
     }

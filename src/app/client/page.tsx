@@ -16,6 +16,8 @@ import {
   ChevronLeft,
   Sparkles,
   FileText,
+  AlertTriangle,
+  Lock,
 } from "lucide-react"
 
 import { ClientRoutinesSection } from "./client-routines-section"
@@ -30,11 +32,14 @@ export default async function ClientDashboardPage() {
     return null
   }
 
-  // Fetch client data with all assigned routines, assigned diet, trainer, progress logs
-  const client: any = await (prisma as any).client.findUnique({
+  // Fetch client data with subscriptions, assigned routines, assigned diet, trainer, progress logs
+  const client: any = await prisma.client.findUnique({
     where: { id: userId },
     include: {
       trainer: true,
+      subscriptions: {
+        orderBy: { endDate: "desc" },
+      },
       routineHistory: {
         orderBy: { createdAt: "desc" },
         include: {
@@ -78,6 +83,13 @@ export default async function ClientDashboardPage() {
     )
   }
 
+  // Active Subscription Check
+  const now = new Date()
+  const activeSub = client.subscriptions?.find(
+    (s: any) => s.status === "ACTIVE" && new Date(s.endDate) >= now
+  )
+  const isSubscriptionActive = Boolean(activeSub)
+
   const rawRoutines = client.routineHistory?.map((h: any) => h.routine).filter(Boolean) || []
   const assignedRoutines = Array.from(new Map(rawRoutines.map((r: any) => [r.id, r])).values())
   const activeDiet = client.dietHistory?.[0]?.dietPlan
@@ -119,56 +131,94 @@ export default async function ClientDashboardPage() {
         <div className="absolute -left-10 -bottom-10 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl" />
       </div>
 
-      {/* Grid Section 1: Assigned Routines & Active Diet */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Workout Routines Card with Modal Switcher */}
-        <ClientRoutinesSection assignedRoutines={assignedRoutines} clientId={client.id} />
-
-        {/* Diet Plan Card */}
-        <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-5 flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-2 text-xs font-bold bg-teal-50 text-teal-700 px-3 py-1 rounded-xl border border-teal-200">
-                <Utensils className="h-4 w-4" />
-                برنامه تغذیه فعال
-              </span>
+      {/* Subscription Expired Warning Banner if inactive */}
+      {!isSubscriptionActive && (
+        <div className="p-6 rounded-3xl bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-200 shadow-sm space-y-3 text-rose-950">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-rose-100 text-rose-700 border border-rose-200 shrink-0">
+              <AlertTriangle className="h-6 w-6" />
             </div>
-
-            {activeDiet ? (
-              <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-900 font-heading">
-                  {activeDiet.title}
-                </h3>
-                {activeDiet.description && (
-                  <p className="text-xs text-slate-500 line-clamp-2">
-                    {activeDiet.description}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="py-6 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                هنوز برنامه تغذیه‌ای برای شما ثبت نشده است.
-              </div>
-            )}
+            <div>
+              <h3 className="text-base font-extrabold font-heading text-rose-900">
+                اشتراک ورزشی شما فعال نیست
+              </h3>
+              <p className="text-xs text-rose-700 mt-0.5 leading-relaxed">
+                برای دسترسی به برنامه‌های تمرینی آنلاین، برنامه تغذیه و شروع تمرین زنده، لطفاً جهت تمدید اشتراک با مربی خود تماس بگیرید.
+              </p>
+            </div>
           </div>
 
-          {activeDiet && (
-            <Link
-              href={`/client/diets/${activeDiet.id}`}
-              className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-3.5 px-4 rounded-2xl transition-all shadow-sm"
-            >
-              مشاهده کامل برنامه‌ تغذیه
-              <ChevronLeft className="h-4 w-4" />
-            </Link>
+          {client.trainer && (
+            <div className="pt-2 flex justify-end">
+              <Link
+                href="/client/messages"
+                className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs"
+              >
+                <MessageSquare className="h-4 w-4" />
+                درخواست تمدید اشتراک از {client.trainer.name}
+              </Link>
+            </div>
           )}
         </div>
+      )}
 
-      </div>
+      {/* Grid Section 1: Assigned Routines & Active Diet */}
+      {isSubscriptionActive ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Workout Routines Card with Modal Switcher */}
+          <ClientRoutinesSection assignedRoutines={assignedRoutines} clientId={client.id} />
+
+          {/* Diet Plan Card */}
+          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-5 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-2 text-xs font-bold bg-teal-50 text-teal-700 px-3 py-1 rounded-xl border border-teal-200">
+                  <Utensils className="h-4 w-4" />
+                  برنامه تغذیه فعال
+                </span>
+              </div>
+
+              {activeDiet ? (
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-slate-900 font-heading">
+                    {activeDiet.title}
+                  </h3>
+                  {activeDiet.description && (
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {activeDiet.description}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  هنوز برنامه تغذیه‌ای برای شما ثبت نشده است.
+                </div>
+              )}
+            </div>
+
+            {activeDiet && (
+              <Link
+                href={`/client/diets/${activeDiet.id}`}
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-3.5 px-4 rounded-2xl transition-all shadow-sm"
+              >
+                مشاهده کامل برنامه‌ تغذیه
+                <ChevronLeft className="h-4 w-4" />
+              </Link>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="p-8 rounded-3xl bg-slate-50 border border-slate-200 text-center space-y-3">
+          <Lock className="h-8 w-8 text-slate-400 mx-auto" />
+          <h3 className="text-sm font-bold text-slate-700">دسترسی به خدمات محدود شده است</h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            به دلیل عدم وجود اشتراک فعال، دسترسی به برنامه‌های تمرینی و تغذیه موقتاً مسدود می‌باشد.
+          </p>
+        </div>
+      )}
 
       {/* Grid Section 2: Physical Metrics & Assigned Trainer */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         {/* Physical Stats Card */}
         <div className="lg:col-span-2 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -260,7 +310,6 @@ export default async function ClientDashboardPage() {
             </Link>
           )}
         </div>
-
       </div>
     </div>
   )

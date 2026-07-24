@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -10,7 +11,7 @@ import { NavbarUserDropdown } from "./navbar-user-dropdown"
 
 const trainerNavItems = [
   { href: "/clients", label: "شاگردان من", icon: Users },
-  { href: "/messages", label: "پیام‌ها", icon: MessageSquare },
+  { href: "/messages", label: "پیام‌ها", icon: MessageSquare, isMessages: true },
   { href: "/routines", label: "برنامه‌های تمرینی", icon: Dumbbell },
   { href: "/diets", label: "برنامه‌های تغذیه", icon: Utensils },
   { href: "/exercises", label: "بانک حرکات", icon: BookOpen },
@@ -20,12 +21,32 @@ const trainerNavItems = [
 const clientNavItems = [
   { href: "/client", label: "داشبورد من", icon: Home },
   { href: "/client/progress", label: "ثبت پیشرفت", icon: TrendingUp },
-  { href: "/client/messages", label: "پیام‌ها", icon: MessageSquare },
+  { href: "/client/messages", label: "پیام‌ها", icon: MessageSquare, isMessages: true },
 ]
 
 export function Navbar() {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const [unreadCount, setUnreadCount] = useState<number>(0)
+
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    function fetchUnread() {
+      fetch("/api/messages/unread")
+        .then((res) => res.json())
+        .then((data) => {
+          if (typeof data.unreadCount === "number") {
+            setUnreadCount(data.unreadCount)
+          }
+        })
+        .catch(() => {})
+    }
+
+    fetchUnread()
+    const interval = setInterval(fetchUnread, 15000) // Poll every 15 seconds
+    return () => clearInterval(interval)
+  }, [session?.user?.id, pathname])
 
   // Do not render Navbar on PDF printable pages or login page
   if (pathname.includes("/pdf") || pathname === "/login") {
@@ -63,12 +84,14 @@ export function Navbar() {
           {currentNavItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || (item.href !== "/client" && item.href !== "/" && pathname.startsWith(item.href))
+            const isMsg = (item as any).isMessages
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all",
+                  "relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all",
                   isActive
                     ? "bg-white text-emerald-700 shadow-xs border border-slate-200"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
@@ -76,6 +99,13 @@ export function Navbar() {
               >
                 <Icon className={cn("h-4 w-4", isActive ? "text-emerald-600" : "text-slate-400")} />
                 {item.label}
+
+                {/* Unread Messages Badge */}
+                {isMsg && unreadCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white animate-pulse">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </Link>
             )
           })}

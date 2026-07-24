@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ShieldCheck, X, Loader2 } from "lucide-react"
 import { createSubscription } from "@/app/actions/client"
+import { toast } from "sonner"
 
 export function SubscriptionModal({ clientId }: { clientId: string }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -16,7 +17,7 @@ export function SubscriptionModal({ clientId }: { clientId: string }) {
       await createSubscription(clientId, formData)
       setIsOpen(false)
     } catch (err: any) {
-      alert(err.message || "خطا در تمدید اشتراک")
+      toast.error(err.message || "خطا در تمدید اشتراک")
     } finally {
       setLoading(false)
     }

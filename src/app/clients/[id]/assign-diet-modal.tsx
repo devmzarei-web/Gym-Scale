@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Utensils, Plus, Loader2, Check } from "lucide-react"
 import { assignExistingDietToClient } from "@/app/actions/diet"
+import { toast } from "sonner"
 
 interface AssignDietModalProps {
   clientId: string
@@ -22,7 +23,7 @@ export function AssignDietModal({ clientId, diets }: AssignDietModalProps) {
       setIsOpen(false)
       setSelectedId("")
     } catch (err: any) {
-      alert(err.message || "خطا در تخصیص برنامه تغذیه")
+      toast.error(err.message || "خطا در تخصیص برنامه تغذیه")
     } finally {
       setLoading(false)
     }

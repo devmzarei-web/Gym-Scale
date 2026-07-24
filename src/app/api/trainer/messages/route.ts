@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     const targetClientId = searchParams.get("clientId")
 
     // Fetch trainer's assigned clients
-    const clients = await (prisma as any).client.findMany({
+    const clients = await prisma.client.findMany({
       where: userRole === "SUPER_ADMIN" ? {} : { trainerId },
       select: {
         id: true,
@@ -29,7 +29,17 @@ export async function GET(req: Request) {
 
     let messages: any[] = []
     if (targetClientId) {
-      messages = await (prisma as any).message.findMany({
+      // Mark received unread messages from this client as read
+      await prisma.message.updateMany({
+        where: {
+          senderId: targetClientId,
+          receiverId: trainerId,
+          isRead: false,
+        },
+        data: { isRead: true },
+      })
+
+      messages = await prisma.message.findMany({
         where: {
           OR: [
             { senderId: targetClientId, receiverId: trainerId },
@@ -64,7 +74,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "گیرنده و متن پیام الزامی است." }, { status: 400 })
     }
 
-    const newMessage = await (prisma as any).message.create({
+    const newMessage = await prisma.message.create({
       data: {
         senderId: trainerId,
         receiverId: String(clientId),

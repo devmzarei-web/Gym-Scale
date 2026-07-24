@@ -11,7 +11,16 @@ export async function GET() {
       return NextResponse.json({ error: "غیرمجاز" }, { status: 401 })
     }
 
-    const messages = await (prisma as any).message.findMany({
+    // Mark received unread messages as read
+    await prisma.message.updateMany({
+      where: {
+        receiverId: userId,
+        isRead: false,
+      },
+      data: { isRead: true },
+    })
+
+    const messages = await prisma.message.findMany({
       where: {
         OR: [
           { senderId: userId },
@@ -45,7 +54,7 @@ export async function POST(req: Request) {
     }
 
     // Find assigned trainer for client
-    const client = await (prisma as any).client.findUnique({
+    const client = await prisma.client.findUnique({
       where: { id: userId },
       select: { trainerId: true },
     })
@@ -54,7 +63,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "مربی اختصاصی برای شما ثبت نشده است." }, { status: 400 })
     }
 
-    const newMessage = await (prisma as any).message.create({
+    const newMessage = await prisma.message.create({
       data: {
         senderId: userId,
         receiverId: client.trainerId,

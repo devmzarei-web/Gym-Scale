@@ -12,7 +12,7 @@ export default async function ClientDietViewPage({ params }: { params: Promise<{
 
   if (!userId) return null
 
-  const dietPlan: any = await (prisma as any).dietPlan.findUnique({
+  const dietPlan: any = await prisma.dietPlan.findUnique({
     where: { id },
   })
 

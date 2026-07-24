@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Download, Edit, Trash2, Loader2 } from "lucide-react"
 import { deleteRoutine } from "@/app/actions/routine"
+import { toast } from "sonner"
 
 export function RoutineActions({ routineId, clientId }: { routineId: string; clientId?: string }) {
   const router = useRouter()
@@ -42,7 +43,7 @@ export function RoutineActions({ routineId, clientId }: { routineId: string; cli
       a.remove()
       window.URL.revokeObjectURL(url)
     } catch (err: any) {
-      alert(err.message || "خطا در دانلود فایل PDF")
+      toast.error(err.message || "خطا در دانلود فایل PDF")
     } finally {
       setDownloading(false)
     }
@@ -55,7 +56,7 @@ export function RoutineActions({ routineId, clientId }: { routineId: string; cli
       await deleteRoutine(routineId)
       router.push("/routines")
     } catch (err: any) {
-      alert(err.message || "خطا در حذف برنامه")
+      toast.error(err.message || "خطا در حذف برنامه")
     } finally {
       setDeleting(false)
     }

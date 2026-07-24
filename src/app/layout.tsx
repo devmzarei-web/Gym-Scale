@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
 import { Providers } from "@/components/providers"
+import { Toaster } from "sonner"
 
 export const metadata: Metadata = {
   title: "NutriTrain - پلتفرم مدیریت مربیان و برنامه‌ریزی ورزشی",
@@ -21,6 +22,15 @@ export default function RootLayout({
           <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
             {children}
           </main>
+          <Toaster
+            position="top-center"
+            dir="rtl"
+            richColors
+            closeButton
+            toastOptions={{
+              className: "text-xs font-semibold",
+            }}
+          />
         </Providers>
       </body>
     </html>

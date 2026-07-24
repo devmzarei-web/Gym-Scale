@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Dumbbell, ArrowRight, User, Clock } from "lucide-react"
+import { Dumbbell, ArrowRight, User, Clock, Layers } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { RoutineActions } from "./routine-actions"
 
@@ -36,6 +36,15 @@ export default async function RoutineDetailPage({ params }: RoutinePageProps) {
   }
 
   const assignedClient = routine.history[0]?.client
+
+  const groupBadges: Record<string, { label: string; className: string }> = {
+    SUPERSET: { label: "سوپرست", className: "bg-amber-50 text-amber-800 border-amber-200 font-bold" },
+    TRISET: { label: "تری‌ست", className: "bg-purple-50 text-purple-800 border-purple-200 font-bold" },
+    CIRCUIT: { label: "سیرکت (چرخه‌ای)", className: "bg-cyan-50 text-cyan-800 border-cyan-200 font-bold" },
+    DROPSET: { label: "دراپ‌ست", className: "bg-rose-50 text-rose-800 border-rose-200 font-bold" },
+    REST_PAUSE: { label: "رست-پاز", className: "bg-blue-50 text-blue-800 border-blue-200 font-bold" },
+    TEMPO: { label: "تمپو", className: "bg-teal-50 text-teal-800 border-teal-200 font-bold" },
+  }
 
   return (
     <div className="space-y-8">
@@ -96,44 +105,61 @@ export default async function RoutineDetailPage({ params }: RoutinePageProps) {
             </div>
 
             <div className="space-y-3">
-              {day.exercises.map((ex: any, idx: number) => (
-                <div
-                  key={ex.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200/80 gap-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="h-7 w-7 rounded-lg bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
-                      {idx + 1}
-                    </span>
-                    <div>
-                      <h3 className="font-bold text-sm text-slate-900">{ex.name}</h3>
-                      {ex.muscleGroup && (
-                        <span className="text-[10px] text-emerald-700 font-semibold">{ex.muscleGroup}</span>
+              {day.exercises.map((ex: any, idx: number) => {
+                const groupInfo = groupBadges[ex.groupType]
+
+                return (
+                  <div
+                    key={ex.id}
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border gap-3 ${
+                      ex.groupType !== "NORMAL" ? "bg-amber-50/40 border-amber-200" : "bg-slate-50 border-slate-200/80"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="h-7 w-7 rounded-lg bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-sm text-slate-900">{ex.name}</h3>
+                          {groupInfo && (
+                            <span className={`text-[10px] border px-2 py-0.5 rounded-md flex items-center gap-1 ${groupInfo.className}`}>
+                              <Layers className="h-3 w-3" />
+                              {groupInfo.label}
+                            </span>
+                          )}
+                        </div>
+                        {ex.muscleGroup && (
+                          <span className="text-[10px] text-emerald-700 font-semibold">{ex.muscleGroup}</span>
+                        )}
+                        {ex.customDescription && (
+                          <p className="text-[11px] text-slate-500 mt-0.5">{ex.customDescription}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                      <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl font-bold text-slate-800">
+                        {ex.sets} ست
+                      </span>
+                      <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl font-semibold text-slate-700">
+                        {ex.repetitions} تکرار
+                      </span>
+                      {ex.restTime && (
+                        <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-slate-600 flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-slate-400" />
+                          {ex.restTime}
+                        </span>
+                      )}
+                      {ex.weight && (
+                        <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-amber-700 font-bold">
+                          {ex.weight}
+                        </span>
                       )}
                     </div>
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-3 text-xs">
-                    <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl font-bold text-slate-800">
-                      {ex.sets} ست
-                    </span>
-                    <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl font-semibold text-slate-700">
-                      {ex.repetitions} تکرار
-                    </span>
-                    {ex.restTime && (
-                      <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-slate-600 flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-slate-400" />
-                        {ex.restTime}
-                      </span>
-                    )}
-                    {ex.weight && (
-                      <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-amber-700 font-bold">
-                        {ex.weight}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         ))}

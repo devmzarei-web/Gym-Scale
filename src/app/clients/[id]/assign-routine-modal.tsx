@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Dumbbell, Plus, Loader2, Check } from "lucide-react"
 import { assignExistingRoutineToClient } from "@/app/actions/routine"
+import { toast } from "sonner"
 
 interface AssignRoutineModalProps {
   clientId: string
@@ -22,7 +23,7 @@ export function AssignRoutineModal({ clientId, routines }: AssignRoutineModalPro
       setIsOpen(false)
       setSelectedId("")
     } catch (err: any) {
-      alert(err.message || "خطا در تخصیص برنامه تمرینی")
+      toast.error(err.message || "خطا در تخصیص برنامه تمرینی")
     } finally {
       setLoading(false)
     }

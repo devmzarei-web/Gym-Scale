@@ -20,22 +20,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const input = String(credentials.email).trim()
         const password = String(credentials.password)
 
+        // Convert Persian/Arabic digits to English digits
+        const cleanInput = input
+          .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString())
+          .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString())
+
         // Find trainer or client in DB by email or phone
-        let user: any = await (prisma as any).trainer.findFirst({
+        let user: any = await prisma.trainer.findFirst({
           where: {
             OR: [
               { email: input.toLowerCase() },
+              { email: cleanInput.toLowerCase() },
               { phone: input },
+              { phone: cleanInput },
             ],
           },
         })
 
         if (!user) {
-          user = await (prisma as any).client.findFirst({
+          user = await prisma.client.findFirst({
             where: {
               OR: [
                 { email: input.toLowerCase() },
+                { email: cleanInput.toLowerCase() },
                 { phone: input },
+                { phone: cleanInput },
               ],
             },
           })

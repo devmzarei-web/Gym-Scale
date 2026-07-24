@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { Edit3, Trash2, X, Loader2 } from "lucide-react"
 import { deleteExerciseDictionaryItem, updateExerciseDictionaryItem } from "@/app/actions/exercise"
+import { GifUploadInput } from "@/components/gif-upload-input"
+import { toast } from "sonner"
 
 const muscleGroups = [
   "سینه",
@@ -25,7 +27,7 @@ export function ExerciseCardActions({ exercise }: { exercise: any }) {
     try {
       await deleteExerciseDictionaryItem(exercise.id)
     } catch (err: any) {
-      alert(err.message || "خطا در حذف حرکت")
+      toast.error(err.message || "خطا در حذف حرکت")
     } finally {
       setDeleting(false)
     }
@@ -39,7 +41,7 @@ export function ExerciseCardActions({ exercise }: { exercise: any }) {
       await updateExerciseDictionaryItem(exercise.id, formData)
       setIsEditing(false)
     } catch (err: any) {
-      alert(err.message || "خطا در به‌روزرسانی حرکت")
+      toast.error(err.message || "خطا در به‌روزرسانی حرکت")
     } finally {
       setLoading(false)
     }
@@ -118,6 +120,8 @@ export function ExerciseCardActions({ exercise }: { exercise: any }) {
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 resize-none"
                 />
               </div>
+
+              <GifUploadInput name="gifUrl" value={exercise.gifUrl || ""} />
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">لینک ویدیوی آموزش</label>

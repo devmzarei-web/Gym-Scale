@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { MessageSquare, Send, Loader2, User, ArrowRight, CheckCheck } from "lucide-react"
+import { toast } from "sonner"
 
 export default function ClientMessagesPage() {
   const [messages, setMessages] = useState<any[]>([])
@@ -52,7 +53,7 @@ export default function ClientMessagesPage() {
         fetchMessages()
       } else {
         const data = await res.json()
-        alert(data.error || "خطا در ارسال پیام.")
+        toast.error(data.error || "خطا در ارسال پیام.")
       }
     } catch (err) {
       console.error(err)

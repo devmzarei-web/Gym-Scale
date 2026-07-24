@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Loader2, UserCheck } from "lucide-react"
 import { assignClientToTrainer } from "@/app/actions/admin"
+import { toast } from "sonner"
 
 interface ClientTrainerAssignSelectorProps {
   clientId: string
@@ -26,7 +27,7 @@ export function ClientTrainerAssignSelector({
     try {
       await assignClientToTrainer(clientId, newTrainerId || null)
     } catch (err: any) {
-      alert(err.message || "خطا در تخصیص شاگرد به مربی")
+      toast.error(err.message || "خطا در تخصیص شاگرد به مربی")
     } finally {
       setLoading(false)
     }

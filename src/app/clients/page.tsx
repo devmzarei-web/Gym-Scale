@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Users, Phone, ArrowLeft, Dumbbell, Utensils } from "lucide-react"
+import { Users, Phone, ArrowLeft, Dumbbell, Utensils, AlertTriangle, Clock, CheckCircle2 } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { ClientFormModal } from "./client-form-modal"
 
@@ -10,15 +10,20 @@ export default async function ClientsPage() {
     where: { role: "TRAINER" },
   })
 
-  // Scoped to trainerId
-  const whereClause = activeTrainer ? { trainerId: activeTrainer.id } : {}
+  // Scoped to trainerId and filter out soft-deleted clients
+  const whereClause: any = {
+    isDeleted: false,
+  }
+  if (activeTrainer) {
+    whereClause.trainerId = activeTrainer.id
+  }
 
   const clients = await prisma.client.findMany({
     where: whereClause,
     orderBy: { createdAt: "desc" },
     include: {
       subscriptions: {
-        where: { status: "ACTIVE" },
+        orderBy: { endDate: "desc" },
         take: 1,
       },
       routineHistory: {
@@ -33,6 +38,8 @@ export default async function ClientsPage() {
       },
     },
   })
+
+  const now = new Date()
 
   return (
     <div className="space-y-6">
@@ -65,9 +72,41 @@ export default async function ClientsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {clients.map((client: any) => {
-            const activeSub = client.subscriptions[0]
+            const sub = client.subscriptions[0]
             const lastRoutine = client.routineHistory[0]?.routine
             const lastDiet = client.dietHistory[0]?.dietPlan
+
+            // Subscription status calculation
+            let subBadge = {
+              label: "بدون اشتراک",
+              className: "bg-slate-100 text-slate-500 border-slate-200",
+              icon: null as any,
+            }
+
+            if (sub) {
+              const endDate = new Date(sub.endDate)
+              const diffDays = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 3600 * 24))
+
+              if (endDate < now || sub.status === "EXPIRED") {
+                subBadge = {
+                  label: "منقضی شده (نیازمند تمدید)",
+                  className: "bg-rose-50 text-rose-700 border-rose-200 font-bold",
+                  icon: <AlertTriangle className="h-3 w-3 text-rose-600 inline ml-1" />,
+                }
+              } else if (diffDays <= 7) {
+                subBadge = {
+                  label: `${diffDays} روز تا انقضا`,
+                  className: "bg-amber-50 text-amber-700 border-amber-200 font-bold",
+                  icon: <Clock className="h-3 w-3 text-amber-600 inline ml-1" />,
+                }
+              } else {
+                subBadge = {
+                  label: "اشتراک فعال",
+                  className: "bg-emerald-50 text-emerald-700 border-emerald-200 font-bold",
+                  icon: <CheckCircle2 className="h-3 w-3 text-emerald-600 inline ml-1" />,
+                }
+              }
+            }
 
             return (
               <div
@@ -76,9 +115,9 @@ export default async function ClientsPage() {
               >
                 <div className="space-y-4">
                   {/* Avatar & Basic Info */}
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-extrabold text-lg">
+                      <div className="h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-extrabold text-lg shrink-0">
                         {client.name.charAt(0)}
                       </div>
                       <div>
@@ -94,15 +133,10 @@ export default async function ClientsPage() {
                       </div>
                     </div>
 
-                    {activeSub ? (
-                      <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md">
-                        اشتراک فعال
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
-                        بدون اشتراک
-                      </span>
-                    )}
+                    <span className={`text-[10px] border px-2 py-1 rounded-lg shrink-0 flex items-center ${subBadge.className}`}>
+                      {subBadge.icon}
+                      {subBadge.label}
+                    </span>
                   </div>
 
                   {/* Body Stats */}

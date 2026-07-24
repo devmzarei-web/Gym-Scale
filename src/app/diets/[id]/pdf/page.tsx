@@ -44,7 +44,7 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
   const { id } = await params
   const search = searchParams ? await searchParams : {}
 
-  const diet = await (prisma as any).dietPlan.findUnique({
+  const diet = await prisma.dietPlan.findUnique({
     where: { id },
     include: {
       trainer: true,
@@ -55,7 +55,7 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
 
   let client = null
   if (search?.clientId) {
-    client = await (prisma as any).client.findUnique({
+    client = await prisma.client.findUnique({
       where: { id: search.clientId },
     })
   }
@@ -218,7 +218,7 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
       <div className="w-full bg-white">
         <div className="max-w-[190mm] mx-auto py-8 px-4 pdf-body">
           {/* Header */}
-          <div className="flex justify-between items-center pb-3 mb-1">
+          <div className="flex justify-between items-end pb-2">
             {/* Right Side: Logo & Brand */}
             <div className="flex items-center gap-3">
               {logoBase64 ? (
@@ -231,43 +231,44 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
               )}
             </div>
 
-            {/* Left Side: Diet/Client info */}
+            {/* Left Side: Diet Title & Date */}
             <div className="flex flex-col gap-0.5 items-end text-left pdf-header-text">
               <h1 className="text-lg font-extrabold text-slate-900">{toPersianDigits(diet.title)}</h1>
-              {client ? (
-                <div className="flex flex-wrap justify-end gap-2 text-[10px] font-bold text-slate-600 mt-0.5">
-                  <span className="bg-slate-100 px-2 py-0.5 rounded">نام: {client.name}</span>
-                  {client.weight && (
-                    <span className="bg-slate-100 px-2 py-0.5 rounded">
-                      وزن: {toPersianDigits(client.weight)} کیلوگرم
-                    </span>
-                  )}
-                  {client.height && (
-                    <span className="bg-slate-100 px-2 py-0.5 rounded">
-                      قد: {toPersianDigits(client.height)} سانتی‌متر
-                    </span>
-                  )}
-                  {client.age && (
-                    <span className="bg-slate-100 px-2 py-0.5 rounded">
-                      سن: {toPersianDigits(client.age)} سال
-                    </span>
-                  )}
-                  <span className="bg-slate-100 px-2 py-0.5 rounded">
-                    تاریخ: {toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(diet.createdAt)))}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1 items-end mt-0.5">
-                  <p className="text-[10px] font-medium text-slate-500">
-                    {toPersianDigits(diet.description) || "برنامه تغذیه‌ای اختصاصی"}
-                  </p>
-                  <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold">
-                    تاریخ: {toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(diet.createdAt)))}
-                  </span>
-                </div>
-              )}
+              <span className="text-[10px] font-bold text-slate-500 pdf-body whitespace-nowrap">
+                تاریخ صدور: {toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(diet.createdAt)))}
+              </span>
             </div>
           </div>
+
+          {/* Client Metadata Pills placed neatly above the accent line on the right */}
+          {client ? (
+            <div className="flex flex-wrap items-center justify-start gap-1.5 text-[10px] font-bold text-slate-700 pb-2 pdf-body">
+              <span className="bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
+                نام ورزشکار: {client.name}
+              </span>
+              {client.weight && (
+                <span className="bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
+                  وزن: {toPersianDigits(client.weight)} کیلوگرم
+                </span>
+              )}
+              {client.height && (
+                <span className="bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
+                  قد: {toPersianDigits(client.height)} سانتی‌متر
+                </span>
+              )}
+              {client.age && (
+                <span className="bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
+                  سن: {toPersianDigits(client.age)} سال
+                </span>
+              )}
+            </div>
+          ) : diet.description ? (
+            <div className="flex justify-start pb-2">
+              <span className="text-[10px] text-slate-500 font-medium bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded-full pdf-body whitespace-nowrap">
+                {toPersianDigits(diet.description)}
+              </span>
+            </div>
+          ) : null}
 
           {/* Accent line */}
           <div className="gold-line h-[3px] rounded-full mb-5" />

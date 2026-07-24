@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Edit3, Trash2, X, Loader2, KeyRound, CheckCircle, XCircle } from "lucide-react"
 import { deleteTrainerAccount, updateTrainerAccount, toggleTrainerApproval } from "@/app/actions/admin"
+import { toast } from "sonner"
 
 export function TrainerTableActions({ trainer }: { trainer: any }) {
   const [isEditing, setIsEditing] = useState(false)
@@ -18,7 +19,7 @@ export function TrainerTableActions({ trainer }: { trainer: any }) {
     try {
       await toggleTrainerApproval(trainer.id, nextStatus)
     } catch (err: any) {
-      alert(err.message || "خطا در تغییر وضعیت حساب مربی")
+      toast.error(err.message || "خطا در تغییر وضعیت حساب مربی")
     } finally {
       setApproving(false)
     }
@@ -30,7 +31,7 @@ export function TrainerTableActions({ trainer }: { trainer: any }) {
     try {
       await deleteTrainerAccount(trainer.id)
     } catch (err: any) {
-      alert(err.message || "خطا در حذف حساب مربی")
+      toast.error(err.message || "خطا در حذف حساب مربی")
     } finally {
       setDeleting(false)
     }
@@ -44,7 +45,7 @@ export function TrainerTableActions({ trainer }: { trainer: any }) {
       await updateTrainerAccount(trainer.id, formData)
       setIsEditing(false)
     } catch (err: any) {
-      alert(err.message || "خطا در به‌روزرسانی حساب مربی")
+      toast.error(err.message || "خطا در به‌روزرسانی حساب مربی")
     } finally {
       setLoading(false)
     }

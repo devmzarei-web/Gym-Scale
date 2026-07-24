@@ -11,7 +11,7 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const clientId = searchParams.get("clientId")
 
-    const diet = await (prisma as any).dietPlan.findUnique({
+    const diet = await prisma.dietPlan.findUnique({
       where: { id },
       include: {
         trainer: true,
@@ -24,7 +24,7 @@ export async function GET(
 
     let client = null
     if (clientId) {
-      client = await (prisma as any).client.findUnique({
+      client = await prisma.client.findUnique({
         where: { id: clientId },
       })
     }

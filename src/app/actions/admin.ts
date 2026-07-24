@@ -46,7 +46,7 @@ export async function createTrainerAccount(formData: FormData) {
     expiresAt.setDate(expiresAt.getDate() + durationDays)
   }
 
-  await (prisma as any).trainer.create({
+  await prisma.trainer.create({
     data: {
       name,
       email,
@@ -97,7 +97,7 @@ export async function updateTrainerAccount(trainerId: string, formData: FormData
     dataToUpdate.password = await bcrypt.hash(password.trim(), 10)
   }
 
-  await (prisma as any).trainer.update({
+  await prisma.trainer.update({
     where: { id: trainerId },
     data: dataToUpdate,
   })
@@ -107,7 +107,7 @@ export async function updateTrainerAccount(trainerId: string, formData: FormData
 }
 
 export async function deleteTrainerAccount(trainerId: string) {
-  await (prisma as any).trainer.delete({
+  await prisma.trainer.delete({
     where: { id: trainerId },
   })
 
@@ -116,7 +116,7 @@ export async function deleteTrainerAccount(trainerId: string) {
 }
 
 export async function assignClientToTrainer(clientId: string, trainerId: string | null) {
-  await (prisma as any).client.update({
+  await prisma.client.update({
     where: { id: clientId },
     data: {
       trainerId: trainerId || null,
@@ -131,7 +131,7 @@ export async function assignClientToTrainer(clientId: string, trainerId: string 
 
 export async function toggleTrainerApproval(trainerId: string, isApproved: boolean) {
   try {
-    await (prisma as any).trainer.update({
+    await prisma.trainer.update({
       where: { id: trainerId },
       data: { isApproved },
     })

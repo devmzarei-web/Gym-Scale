@@ -1,9 +1,11 @@
 "use client"
 
+import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Download, Trash2, Loader2 } from "lucide-react"
+import { Download, Trash2, Loader2, Edit3 } from "lucide-react"
 import { deleteDietPlan } from "@/app/actions/diet"
+import { toast } from "sonner"
 
 export function DietActions({ dietId }: { dietId: string }) {
   const router = useRouter()
@@ -27,7 +29,7 @@ export function DietActions({ dietId }: { dietId: string }) {
       a.remove()
       window.URL.revokeObjectURL(url)
     } catch (err: any) {
-      alert(err.message || "خطا در دانلود فایل PDF")
+      toast.error(err.message || "خطا در دانلود فایل PDF")
     } finally {
       setDownloading(false)
     }
@@ -40,7 +42,7 @@ export function DietActions({ dietId }: { dietId: string }) {
       await deleteDietPlan(dietId)
       router.push("/diets")
     } catch (err: any) {
-      alert(err.message || "خطا در حذف برنامه تغذیه")
+      toast.error(err.message || "خطا در حذف برنامه تغذیه")
     } finally {
       setDeleting(false)
     }
@@ -48,6 +50,14 @@ export function DietActions({ dietId }: { dietId: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <Link
+        href={`/diets/${dietId}/edit`}
+        className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl transition-colors border border-slate-200 shadow-2xs"
+      >
+        <Edit3 className="h-4 w-4 text-slate-600" />
+        ویرایش برنامه
+      </Link>
+
       <button
         onClick={handleDownloadPdf}
         disabled={downloading}

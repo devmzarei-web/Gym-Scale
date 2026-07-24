@@ -9,6 +9,9 @@ import { RoutineActions } from "@/app/routines/[id]/routine-actions"
 import { DietActions } from "@/app/diets/[id]/diet-actions"
 import { AssignRoutineModal } from "./assign-routine-modal"
 import { AssignDietModal } from "./assign-diet-modal"
+import { TdeeCalculatorModal } from "@/components/tdee-calculator-modal"
+import { ClientProgressChart } from "@/components/client-progress-chart"
+import { ProgressPhotoGallery } from "@/components/progress-photo-gallery"
 
 export const revalidate = 0
 
@@ -22,7 +25,7 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
   const user = session?.user
   const isSuperAdmin = (user as any)?.role === "SUPER_ADMIN"
 
-  const client: any = await (prisma as any).client.findUnique({
+  const client: any = await prisma.client.findUnique({
     where: { id },
     include: {
       subscriptions: {
@@ -47,6 +50,9 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
       workoutLogs: {
         orderBy: { completedAt: "desc" },
         take: 10,
+      },
+      progressLogs: {
+        orderBy: { loggedAt: "asc" },
       }
     }
   })
@@ -139,8 +145,8 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                     اشتراک فعال
                   </span>
                 ) : (
-                  <span className="text-xs font-semibold bg-slate-100 text-slate-500 px-2.5 py-0.5 rounded-full">
-                    اشتراک منقضی شده
+                  <span className="text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                    اشتراک منقضی شده / نیازمند تمدید
                   </span>
                 )}
               </div>
@@ -165,7 +171,14 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
             </div>
           </div>
 
-          <SubscriptionModal clientId={client.id} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <TdeeCalculatorModal
+              initialAge={client.age}
+              initialWeight={client.weight}
+              initialHeight={client.height}
+            />
+            <SubscriptionModal clientId={client.id} />
+          </div>
         </div>
 
         {/* Physical Metrics Grid */}
@@ -197,6 +210,12 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
           </div>
         )}
       </div>
+
+      {/* Progress Chart Component */}
+      <ClientProgressChart clientId={client.id} logs={client.progressLogs} />
+
+      {/* Progress Photo Gallery Component */}
+      <ProgressPhotoGallery clientId={client.id} photoUrls={client.photoUrls} />
 
       {/* Routine & Diet Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -236,25 +255,21 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                 <p className="text-xs text-slate-600">{currentRoutine.description}</p>
               )}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/routines/${currentRoutine.id}`}
-                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
-                  >
-                    مشاهده جزئیات
-                    <ArrowRight className="h-3.5 w-3.5 rotate-180" />
-                  </Link>
+                <Link
+                  href={`/routines/${currentRoutine.id}`}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                >
+                  مشاهده جزئیات
+                  <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                </Link>
 
-                  <a
-                    href={`/api/routines/${currentRoutine.id}/pdf?clientId=${client.id}`}
-                    download
-                    className="text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg transition-all"
-                  >
-                    دانلود مستقیم PDF شاگرد
-                  </a>
-                </div>
-
-                <RoutineActions routineId={currentRoutine.id} />
+                <a
+                  href={`/api/routines/${currentRoutine.id}/pdf?clientId=${client.id}`}
+                  download
+                  className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition-all shadow-sm"
+                >
+                  دانلود برنامه تمرینی شاگرد
+                </a>
               </div>
             </div>
           ) : (
@@ -296,25 +311,21 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                 <p className="text-xs text-slate-600">{currentDiet.description}</p>
               )}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/diets/${currentDiet.id}`}
-                    className="text-xs font-bold text-teal-600 hover:text-teal-700 flex items-center gap-1"
-                  >
-                    مشاهده جزئیات
-                    <ArrowRight className="h-3.5 w-3.5 rotate-180" />
-                  </Link>
+                <Link
+                  href={`/diets/${currentDiet.id}`}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                >
+                  مشاهده جزئیات
+                  <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                </Link>
 
-                  <a
-                    href={`/api/diets/${currentDiet.id}/pdf?clientId=${client.id}`}
-                    download
-                    className="text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg transition-all"
-                  >
-                    دانلود مستقیم PDF شاگرد
-                  </a>
-                </div>
-
-                <DietActions dietId={currentDiet.id} />
+                <a
+                  href={`/api/diets/${currentDiet.id}/pdf?clientId=${client.id}`}
+                  download
+                  className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-xl transition-all shadow-sm"
+                >
+                  دانلود برنامه تغذیه شاگرد
+                </a>
               </div>
             </div>
           ) : (

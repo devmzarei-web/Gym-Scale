@@ -109,6 +109,20 @@ export default async function ExercisesPage({ searchParams }: ExercisesPageProps
                   </div>
                 </div>
 
+                {ex.gifUrl && (
+                  <div className="relative h-28 w-full rounded-xl bg-slate-900 overflow-hidden border border-slate-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={ex.gifUrl}
+                      alt={ex.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <span className="absolute bottom-1.5 right-1.5 text-[9px] font-bold bg-slate-900/80 text-emerald-400 px-2 py-0.5 rounded-md backdrop-blur-xs">
+                      GIF آموزش
+                    </span>
+                  </div>
+                )}
+
                 {ex.description && (
                   <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                     {ex.description}
@@ -116,17 +130,25 @@ export default async function ExercisesPage({ searchParams }: ExercisesPageProps
                 )}
               </div>
 
-              {ex.videoUrl && (
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
-                  <a
-                    href={ex.videoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5"
-                  >
-                    ویدیوی آموزش
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
+              {(ex.videoUrl || ex.gifUrl) && (
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  {ex.gifUrl ? (
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                      تصویر متحرک دارد
+                    </span>
+                  ) : <div />}
+
+                  {ex.videoUrl && (
+                    <a
+                      href={ex.videoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5"
+                    >
+                      ویدیوی آموزش
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
                 </div>
               )}
             </div>

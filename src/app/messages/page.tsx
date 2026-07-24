@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { MessageSquare, Send, Loader2, User, Search, CheckCheck } from "lucide-react"
+import { toast } from "sonner"
 
 function TrainerMessagesContent() {
   const searchParams = useSearchParams()
@@ -73,7 +74,7 @@ function TrainerMessagesContent() {
         fetchClientsAndMessages()
       } else {
         const data = await res.json()
-        alert(data.error || "خطا در ارسال پیام.")
+        toast.error(data.error || "خطا در ارسال پیام.")
       }
     } catch (err) {
       console.error(err)

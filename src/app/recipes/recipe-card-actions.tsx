@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Edit3, Trash2, X, Loader2 } from "lucide-react"
 import { deleteRecipe, updateRecipe } from "@/app/actions/recipe"
+import { toast } from "sonner"
 
 const categories = ["صبحانه", "ناهار/شام", "میان وعده", "پروتئینی", "دسر رژیمی"]
 
@@ -17,7 +18,7 @@ export function RecipeCardActions({ recipe }: { recipe: any }) {
     try {
       await deleteRecipe(recipe.id)
     } catch (err: any) {
-      alert(err.message || "خطا در حذف دستورپخت")
+      toast.error(err.message || "خطا در حذف دستورپخت")
     } finally {
       setDeleting(false)
     }
@@ -31,7 +32,7 @@ export function RecipeCardActions({ recipe }: { recipe: any }) {
       await updateRecipe(recipe.id, formData)
       setIsEditing(false)
     } catch (err: any) {
-      alert(err.message || "خطا در به‌روزرسانی دستورپخت")
+      toast.error(err.message || "خطا در به‌روزرسانی دستورپخت")
     } finally {
       setLoading(false)
     }

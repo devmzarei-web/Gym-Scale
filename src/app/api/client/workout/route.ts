@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "نام روز تمرینی الزامی است." }, { status: 400 })
     }
 
-    const log = await (prisma as any).workoutSessionLog.create({
+    const log = await prisma.workoutSessionLog.create({
       data: {
         clientId: userId,
         routineId: routineId ? String(routineId) : null,

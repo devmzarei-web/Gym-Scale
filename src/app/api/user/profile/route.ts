@@ -13,7 +13,7 @@ export async function GET() {
     const userId = session.user.id
 
     // Search in Trainer table first
-    let user: any = await (prisma as any).trainer.findUnique({
+    let user: any = await prisma.trainer.findUnique({
       where: { id: userId },
       select: {
         id: true,

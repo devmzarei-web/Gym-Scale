@@ -102,13 +102,21 @@ export default async function DietsPage() {
                   <span className="text-[10px] text-slate-400">
                     {new Date(diet.createdAt).toLocaleDateString("fa-IR")}
                   </span>
-                  <Link
-                    href={`/diets/${diet.id}`}
-                    className="text-xs font-bold text-teal-600 hover:text-teal-700 flex items-center gap-1 group-hover:translate-x-[-2px] transition-all"
-                  >
-                    مشاهده برنامه
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/diets/${diet.id}/edit`}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-colors"
+                    >
+                      ویرایش
+                    </Link>
+                    <Link
+                      href={`/diets/${diet.id}`}
+                      className="text-xs font-bold text-teal-600 hover:text-teal-700 flex items-center gap-1 group-hover:translate-x-[-2px] transition-all"
+                    >
+                      مشاهده
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             )

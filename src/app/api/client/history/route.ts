@@ -20,7 +20,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "دسترسی غیرمجاز" }, { status: 403 })
     }
 
-    const workoutLogs = await (prisma as any).workoutSessionLog.findMany({
+    const workoutLogs = await prisma.workoutSessionLog.findMany({
       where: { clientId: targetClientId },
       orderBy: { completedAt: "desc" },
     })

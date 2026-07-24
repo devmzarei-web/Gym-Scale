@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ShieldCheck, Plus, X, Loader2 } from "lucide-react"
 import { createTrainerAccount } from "@/app/actions/admin"
+import { toast } from "sonner"
 
 export function AddTrainerModal() {
   const [isOpen, setIsOpen] = useState(false)
@@ -17,7 +18,7 @@ export function AddTrainerModal() {
       await createTrainerAccount(formData)
       setIsOpen(false)
     } catch (err: any) {
-      alert(err.message || "خطا در ساخت حساب مربی")
+      toast.error(err.message || "خطا در ساخت حساب مربی")
     } finally {
       setLoading(false)
     }

@@ -2,15 +2,16 @@
 
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
+import type { ExerciseGroupType } from "@prisma/client"
 
 async function ensureExercisesInDictionary(exercises: Array<{ name: string; muscleGroup?: string; gifUrl?: string | null }>) {
   for (const ex of exercises) {
     if (ex.name && ex.name.trim()) {
-      const existing = await (prisma as any).exerciseDictionary.findFirst({
+      const existing = await prisma.exerciseDictionary.findFirst({
         where: { name: ex.name.trim() },
       })
       if (!existing) {
-        await (prisma as any).exerciseDictionary.create({
+        await prisma.exerciseDictionary.create({
           data: {
             name: ex.name.trim(),
             muscleGroup: ex.muscleGroup || "سایر",
@@ -18,7 +19,7 @@ async function ensureExercisesInDictionary(exercises: Array<{ name: string; musc
           },
         })
       } else if (ex.gifUrl && !existing.gifUrl) {
-        await (prisma as any).exerciseDictionary.update({
+        await prisma.exerciseDictionary.update({
           where: { id: existing.id },
           data: { gifUrl: ex.gifUrl },
         })
@@ -27,25 +28,31 @@ async function ensureExercisesInDictionary(exercises: Array<{ name: string; musc
   }
 }
 
+type ExerciseInput = {
+  name: string
+  muscleGroup?: string
+  sets: number
+  repetitions: string
+  restTime?: string
+  weight?: string
+  customDescription?: string
+  gifUrl?: string | null
+  groupType?: ExerciseGroupType
+  groupId?: string | null
+}
+
+type WorkoutDayInput = {
+  day: "SATURDAY" | "SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY"
+  label?: string
+  exercises: ExerciseInput[]
+}
+
 export async function createRoutine(data: {
   title: string
   description?: string
   clientId?: string
   isTemplate: boolean
-  workoutDays: Array<{
-    day: "SATURDAY" | "SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY"
-    label?: string
-    exercises: Array<{
-      name: string
-      muscleGroup?: string
-      sets: number
-      repetitions: string
-      restTime?: string
-      weight?: string
-      customDescription?: string
-      gifUrl?: string | null
-    }>
-  }>
+  workoutDays: WorkoutDayInput[]
 }) {
   if (!data.title || data.title.trim() === "") {
     throw new Error("عنوان برنامه تمرینی الزامی است.")
@@ -59,7 +66,7 @@ export async function createRoutine(data: {
   const allExercises = data.workoutDays.flatMap((wd) => wd.exercises)
   await ensureExercisesInDictionary(allExercises)
 
-  const routine = await (prisma as any).routine.create({
+  const routine = await prisma.routine.create({
     data: {
       title: data.title,
       description: data.description,
@@ -81,6 +88,8 @@ export async function createRoutine(data: {
               customDescription: ex.customDescription,
               gifUrl: ex.gifUrl || null,
               order: exIdx,
+              groupType: (ex.groupType || "NORMAL") as any,
+              groupId: ex.groupId || null,
             })),
           },
         })),
@@ -112,20 +121,7 @@ export async function updateRoutine(
     description?: string
     clientId?: string
     isTemplate: boolean
-    workoutDays: Array<{
-      day: "SATURDAY" | "SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY"
-      label?: string
-      exercises: Array<{
-        name: string
-        muscleGroup?: string
-        sets: number
-        repetitions: string
-        restTime?: string
-        weight?: string
-        customDescription?: string
-        gifUrl?: string | null
-      }>
-    }>
+    workoutDays: WorkoutDayInput[]
   }
 ) {
   const allExercises = data.workoutDays.flatMap((wd) => wd.exercises)
@@ -138,7 +134,7 @@ export async function updateRoutine(
     where: { routineId },
   })
 
-  const routine = await (prisma as any).routine.update({
+  const routine = await prisma.routine.update({
     where: { id: routineId },
     data: {
       title: data.title,
@@ -160,6 +156,8 @@ export async function updateRoutine(
               customDescription: ex.customDescription,
               gifUrl: ex.gifUrl || null,
               order: exIdx,
+              groupType: (ex.groupType || "NORMAL") as any,
+              groupId: ex.groupId || null,
             })),
           },
         })),
@@ -184,12 +182,12 @@ export async function updateRoutine(
 }
 
 export async function assignExistingRoutineToClient(routineId: string, clientId: string) {
-  const existing = await (prisma as any).clientRoutineHistory.findFirst({
+  const existing = await prisma.clientRoutineHistory.findFirst({
     where: { routineId, clientId },
   })
 
   if (!existing) {
-    await (prisma as any).clientRoutineHistory.create({
+    await prisma.clientRoutineHistory.create({
       data: {
         routineId,
         clientId,

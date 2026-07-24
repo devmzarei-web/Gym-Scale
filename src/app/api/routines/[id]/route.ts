@@ -10,7 +10,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: "غیرمجاز" }, { status: 401 })
     }
 
-    const routine = await (prisma as any).routine.findUnique({
+    const routine = await prisma.routine.findUnique({
       where: { id },
       include: {
         workoutDays: {

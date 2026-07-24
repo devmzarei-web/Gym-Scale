@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Plus, X, Loader2, ChefHat } from "lucide-react"
 import { createRecipe } from "@/app/actions/recipe"
+import { toast } from "sonner"
 
 const categories = ["صبحانه", "ناهار/شام", "میان وعده", "پروتئینی", "دسر رژیمی"]
 
@@ -18,7 +19,7 @@ export function AddRecipeModal() {
       await createRecipe(formData)
       setIsOpen(false)
     } catch (err: any) {
-      alert(err.message || "خطا در ثبت دستورپخت")
+      toast.error(err.message || "خطا در ثبت دستورپخت")
     } finally {
       setLoading(false)
     }

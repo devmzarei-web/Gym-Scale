@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ error: "غیرمجاز" }, { status: 401 })
     }
 
-    const logs = await (prisma as any).clientProgressLog.findMany({
+    const logs = await prisma.clientProgressLog.findMany({
       where: { clientId: userId },
       orderBy: { loggedAt: "desc" },
     })
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     const numericThigh = thigh ? Number(thigh) : null
 
     // Create progress log entry
-    const newLog = await (prisma as any).clientProgressLog.create({
+    const newLog = await prisma.clientProgressLog.create({
       data: {
         clientId: userId,
         weight: numericWeight,
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
     // Also update current client weight if weight was logged
     if (numericWeight) {
-      await (prisma as any).client.update({
+      await prisma.client.update({
         where: { id: userId },
         data: { weight: numericWeight },
       })
