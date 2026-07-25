@@ -14,9 +14,11 @@ const trainerNavItems = [
   { href: "/messages", label: "پیام‌ها", icon: MessageSquare, isMessages: true },
   { href: "/routines", label: "برنامه‌های تمرینی", icon: Dumbbell },
   { href: "/diets", label: "برنامه‌های تغذیه", icon: Utensils },
+  { href: "/food-bank", label: "بانک مواد غذایی", icon: Utensils },
   { href: "/exercises", label: "بانک حرکات", icon: BookOpen },
   { href: "/recipes", label: "دستورپخت‌ها", icon: ChefHat },
 ]
+
 
 const clientNavItems = [
   { href: "/client", label: "داشبورد من", icon: Home },

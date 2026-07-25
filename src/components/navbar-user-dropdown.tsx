@@ -78,10 +78,11 @@ export function NavbarUserDropdown() {
             <button
               onClick={() => {
                 setIsOpen(false)
-                signOut({ callbackUrl: "/login" })
+                signOut({ callbackUrl: `${window.location.origin}/login` })
               }}
               className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors"
             >
+
               <LogOut className="h-4 w-4 text-rose-500" />
               خروج از حساب کاربری
             </button>

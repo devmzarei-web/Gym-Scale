@@ -11,7 +11,8 @@ export default async function NewDietPage({ searchParams }: PageProps) {
   const { clientId } = await searchParams
 
   const clients = await prisma.client.findMany({
-    select: { id: true, name: true },
+    where: { isDeleted: false },
+    select: { id: true, name: true, age: true, weight: true, height: true, goals: true },
     orderBy: { name: "asc" },
   })
 

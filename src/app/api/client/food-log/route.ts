@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth()
     const userId = session?.user?.id
@@ -11,23 +11,35 @@ export async function GET() {
       return NextResponse.json({ error: "غیرمجاز" }, { status: 401 })
     }
 
-    // Get today's start and end date
-    const startOfDay = new Date()
+    const { searchParams } = new URL(req.url)
+    const dateParam = searchParams.get("date")
+
+    let targetDate = new Date()
+    if (dateParam) {
+      const parsed = new Date(dateParam)
+      if (!isNaN(parsed.getTime())) {
+        targetDate = parsed
+      }
+    }
+
+    const startOfDay = new Date(targetDate)
     startOfDay.setHours(0, 0, 0, 0)
 
-    const endOfDay = new Date()
+    const endOfDay = new Date(targetDate)
     endOfDay.setHours(23, 59, 59, 999)
 
-    const logs = await prisma.clientFoodLog.findMany({
-      where: {
-        clientId: userId,
-        loggedAt: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-      },
-      orderBy: { loggedAt: "desc" },
-    })
+    const logs = (prisma as any).clientFoodLog
+      ? await (prisma as any).clientFoodLog.findMany({
+          where: {
+            clientId: userId,
+            loggedAt: {
+              gte: startOfDay,
+              lte: endOfDay,
+            },
+          },
+          orderBy: { loggedAt: "asc" },
+        })
+      : []
 
     return NextResponse.json({ logs })
   } catch (error: any) {
@@ -35,6 +47,7 @@ export async function GET() {
     return NextResponse.json({ error: "خطا در دریافت لیست غذاهای مصرفی." }, { status: 500 })
   }
 }
+
 
 export async function POST(req: Request) {
   try {
@@ -52,7 +65,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "نام غذا و میزان کالری الزامی است." }, { status: 400 })
     }
 
-    const log = await prisma.clientFoodLog.create({
+    const log = await (prisma as any).clientFoodLog.create({
       data: {
         clientId: userId,
         foodName: String(foodName),
@@ -89,12 +102,13 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "شناسه غذا الزامی است." }, { status: 400 })
     }
 
-    await prisma.clientFoodLog.deleteMany({
+    await (prisma as any).clientFoodLog.deleteMany({
       where: {
         id: logId,
         clientId: userId,
       },
     })
+
 
     return NextResponse.json({ message: "غذا حذف شد." })
   } catch (error: any) {

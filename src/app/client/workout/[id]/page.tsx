@@ -19,6 +19,8 @@ import {
   Award,
 } from "lucide-react"
 
+import RestTimer, { playBeepAndVibrate } from "../rest-timer"
+
 export default function LiveWorkoutModePage() {
   const params = useParams()
   const router = useRouter()
@@ -61,8 +63,8 @@ export default function LiveWorkoutModePage() {
       }, 1000)
     } else if (timerSeconds === 0 && timerActive) {
       setTimerActive(false)
-      // Play audio beep when timer finishes
-      playBeepSound()
+      // Play audio beep and trigger haptic vibration when timer finishes
+      playBeepAndVibrate()
     }
     return () => clearInterval(interval)
   }, [timerActive, timerSeconds])
@@ -465,57 +467,14 @@ export default function LiveWorkoutModePage() {
       </div>
 
       {/* Floating Rest Countdown Timer Widget (Sticky Bottom) */}
-      <div className="fixed bottom-4 left-4 right-4 max-w-xl mx-auto z-40 bg-slate-900/95 backdrop-blur-xl text-white p-4 rounded-3xl border border-slate-700/80 shadow-2xl flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl text-emerald-400">
-            <Timer className="h-6 w-6" />
-          </div>
-          <div>
-            <span className="block text-[10px] text-slate-400 font-bold">تایمر استراحت بین ست‌ها</span>
-            <span className="text-2xl font-black font-mono tracking-wider text-emerald-400">
-              {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, "0")}
-            </span>
-          </div>
-        </div>
-
-        {/* Timer Control Buttons */}
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setTimerActive(!timerActive)}
-            className="p-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all"
-          >
-            {timerActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-white" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setTimerSeconds(timerPreset)
-              setTimerActive(false)
-            }}
-            className="p-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </button>
-
-          {/* Quick Presets */}
-          <div className="hidden sm:flex items-center gap-1 border-r border-slate-700 pr-2 mr-1 text-[11px] font-bold">
-            {[45, 60, 90, 120].map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => handleStartTimer(s)}
-                className={`px-2 py-1 rounded-lg transition-all ${
-                  timerPreset === s ? "bg-emerald-500 text-slate-900" : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                }`}
-              >
-                {s}s
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <RestTimer
+        timerSeconds={timerSeconds}
+        setTimerSeconds={setTimerSeconds}
+        timerActive={timerActive}
+        setTimerActive={setTimerActive}
+        timerPreset={timerPreset}
+        handleStartTimer={handleStartTimer}
+      />
 
       {/* Finish Workout CTA Button */}
       <div className="pt-4 flex justify-center">

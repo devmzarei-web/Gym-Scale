@@ -7,6 +7,7 @@ export async function createDietPlan(data: {
   title: string
   description?: string
   content: string
+  sectionsJson?: any
   clientId?: string
   isTemplate: boolean
 }) {
@@ -23,6 +24,7 @@ export async function createDietPlan(data: {
       title: data.title,
       description: data.description,
       content: data.content,
+      sectionsJson: data.sectionsJson || null,
       isTemplate: data.isTemplate,
       trainerId: trainer?.id || null,
     },
@@ -50,6 +52,7 @@ export async function updateDietPlan(
     title: string
     description?: string
     content: string
+    sectionsJson?: any
     isTemplate: boolean
   }
 ) {
@@ -63,6 +66,7 @@ export async function updateDietPlan(
       title: data.title,
       description: data.description,
       content: data.content,
+      sectionsJson: data.sectionsJson || null,
       isTemplate: data.isTemplate,
     },
   })
@@ -93,5 +97,13 @@ export async function deleteDietPlan(dietPlanId: string) {
 
   revalidatePath("/diets")
   revalidatePath("/")
+  return { success: true }
+}
+
+export async function unassignDietFromClient(historyId: string, clientId: string) {
+  await prisma.clientDietHistory.delete({
+    where: { id: historyId },
+  })
+  revalidatePath(`/clients/${clientId}`)
   return { success: true }
 }

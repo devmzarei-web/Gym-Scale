@@ -1,6 +1,7 @@
 import fs from "fs"
 import path from "path"
 import puppeteer from "puppeteer"
+import { acquirePdfPage, releasePdfPage } from "./puppeteer-pool"
 
 const toPersianDigits = (num: string | number | undefined | null) => {
   if (num === undefined || num === null) return ""
@@ -309,21 +310,41 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
     </html>
   `
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  })
-  const page = await browser.newPage()
-  await page.setContent(html, { waitUntil: "domcontentloaded" })
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "15mm", right: "12mm", bottom: "15mm", left: "12mm" },
-  })
-  await browser.close()
-
-  return Buffer.from(pdfBuffer)
+  try {
+    const { page } = await acquirePdfPage()
+    try {
+      await page.setContent(html, { waitUntil: "domcontentloaded" })
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "15mm", right: "12mm", bottom: "15mm", left: "12mm" },
+      })
+      return Buffer.from(pdfBuffer)
+    } finally {
+      await releasePdfPage(page)
+    }
+  } catch (poolErr) {
+    console.warn("Puppeteer pool fallback activated for routine PDF:", poolErr)
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    })
+    try {
+      const page = await browser.newPage()
+      await page.setContent(html, { waitUntil: "domcontentloaded" })
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "15mm", right: "12mm", bottom: "15mm", left: "12mm" },
+      })
+      return Buffer.from(pdfBuffer)
+    } finally {
+      await browser.close()
+    }
+  }
 }
+
+
 
 export async function generateDietPdfBuffer(diet: any, client?: any, trainer?: any): Promise<Buffer> {
   const logoBase64 = getBase64Asset("NutriTrain.png", "image/png")
@@ -420,18 +441,38 @@ export async function generateDietPdfBuffer(diet: any, client?: any, trainer?: a
     </html>
   `
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  })
-  const page = await browser.newPage()
-  await page.setContent(html, { waitUntil: "domcontentloaded" })
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "15mm", right: "12mm", bottom: "15mm", left: "12mm" },
-  })
-  await browser.close()
-
-  return Buffer.from(pdfBuffer)
+  try {
+    const { page } = await acquirePdfPage()
+    try {
+      await page.setContent(html, { waitUntil: "domcontentloaded" })
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "15mm", right: "12mm", bottom: "15mm", left: "12mm" },
+      })
+      return Buffer.from(pdfBuffer)
+    } finally {
+      await releasePdfPage(page)
+    }
+  } catch (poolErr) {
+    console.warn("Puppeteer pool fallback activated for diet PDF:", poolErr)
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    })
+    try {
+      const page = await browser.newPage()
+      await page.setContent(html, { waitUntil: "domcontentloaded" })
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "15mm", right: "12mm", bottom: "15mm", left: "12mm" },
+      })
+      return Buffer.from(pdfBuffer)
+    } finally {
+      await browser.close()
+    }
+  }
 }
+
+

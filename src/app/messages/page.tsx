@@ -22,13 +22,20 @@ function TrainerMessagesContent() {
 
   useEffect(() => {
     fetchClientsAndMessages()
+
+    // Real-time live polling for new messages every 2.5s while on trainer chat page
+    const interval = setInterval(() => {
+      fetchClientsAndMessages(true)
+    }, 2500)
+
+    return () => clearInterval(interval)
   }, [selectedClientId])
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  async function fetchClientsAndMessages() {
+  async function fetchClientsAndMessages(isSilent = false) {
     try {
       const url = selectedClientId
         ? `/api/trainer/messages?clientId=${selectedClientId}`
@@ -39,7 +46,14 @@ function TrainerMessagesContent() {
 
       if (res.ok) {
         if (data.clients) setClients(data.clients)
-        if (data.messages) setMessages(data.messages)
+        if (data.messages) {
+          setMessages((prev) => {
+            if (JSON.stringify(prev) !== JSON.stringify(data.messages)) {
+              return data.messages
+            }
+            return prev
+          })
+        }
 
         // Default select first client if none selected
         if (!selectedClientId && data.clients && data.clients.length > 0) {
@@ -49,8 +63,10 @@ function TrainerMessagesContent() {
     } catch (err) {
       console.error(err)
     } finally {
-      setLoadingClients(false)
-      setLoadingMessages(false)
+      if (!isSilent) {
+        setLoadingClients(false)
+        setLoadingMessages(false)
+      }
     }
   }
 
@@ -71,7 +87,7 @@ function TrainerMessagesContent() {
 
       if (res.ok) {
         setInputContent("")
-        fetchClientsAndMessages()
+        fetchClientsAndMessages(true)
       } else {
         const data = await res.json()
         toast.error(data.error || "خطا در ارسال پیام.")
@@ -149,14 +165,14 @@ function TrainerMessagesContent() {
                       {client.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-xs font-bold text-slate-900 truncate">
-                        {client.name}
-                      </h4>
-                      {client.phone && (
-                        <p className="text-[10px] text-slate-400 font-mono">
-                          {client.phone}
-                        </p>
-                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900 truncate">
+                          {client.name}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 truncate block mt-0.5 font-mono dir-ltr text-right">
+                        {client.phone || client.email || "بدون مشخصات"}
+                      </span>
                     </div>
                   </button>
                 )
@@ -165,53 +181,63 @@ function TrainerMessagesContent() {
           </div>
         </div>
 
-        {/* Right Chat Area */}
-        <div className="md:col-span-2 flex flex-col h-full bg-white">
-          {selectedClient ? (
+        {/* Right Side: Chat Window */}
+        <div className="col-span-2 flex flex-col h-full bg-white">
+          {!selectedClient ? (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
+              <User className="h-10 w-10 text-slate-300" />
+              <p className="text-xs font-bold">برای شروع گفتگو، یک شاگرد را از لیست انتخاب کنید.</p>
+            </div>
+          ) : (
             <>
-              {/* Selected Client Header */}
-              <div className="p-4 border-b border-slate-200 flex items-center gap-3 bg-slate-50/30">
-                <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-xs shadow-xs">
-                  {selectedClient.name.charAt(0)}
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-slate-900">
-                    گفتگو با {selectedClient.name}
-                  </h3>
-                  <span className="text-[10px] text-slate-400">شاگرد فعال شما</span>
+              {/* Active Client Header */}
+              <div className="p-4 border-b border-slate-200 bg-slate-50/60 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">
+                    {selectedClient.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900 font-heading">
+                      {selectedClient.name}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      {selectedClient.phone || selectedClient.email}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Chat Feed */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30">
+              <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/30">
                 {loadingMessages ? (
                   <div className="h-full flex items-center justify-center">
                     <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
-                    <MessageSquare className="h-8 w-8 text-slate-300" />
-                    <p className="text-xs">هنوز پیامی رد و بدل نشده است.</p>
+                    <MessageSquare className="h-10 w-10 text-slate-300" />
+                    <p className="text-xs">پیامی با این شاگرد ثبت نشده است.</p>
+                    <p className="text-[11px] text-slate-400">اولین پیام خود را ارسال نمایید!</p>
                   </div>
                 ) : (
-                  messages.map((msg) => {
-                    const isTrainer = msg.senderRole !== "CLIENT"
+                  messages.map((msg: any) => {
+                    const isMine = msg.senderRole !== "CLIENT"
                     return (
                       <div
                         key={msg.id}
-                        className={`flex ${isTrainer ? "justify-start" : "justify-end"}`}
+                        className={`flex flex-col ${isMine ? "items-start" : "items-end"}`}
                       >
                         <div
-                          className={`max-w-[80%] p-3.5 rounded-2xl text-xs space-y-1 shadow-xs ${
-                            isTrainer
-                              ? "bg-slate-900 text-white rounded-tr-none"
-                              : "bg-white border border-slate-200 text-slate-900 rounded-tl-none"
+                          className={`max-w-[80%] rounded-2xl p-4 text-xs leading-relaxed space-y-1.5 ${
+                            isMine
+                              ? "bg-emerald-600 text-white rounded-tr-none shadow-xs"
+                              : "bg-white text-slate-900 border border-slate-200 rounded-tl-none shadow-xs"
                           }`}
                         >
-                          <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
                           <div
-                            className={`flex items-center justify-end gap-1 text-[10px] ${
-                              isTrainer ? "text-slate-400" : "text-slate-400"
+                            className={`flex items-center gap-1 text-[10px] ${
+                              isMine ? "text-emerald-100" : "text-slate-400"
                             }`}
                           >
                             <span>
@@ -220,7 +246,7 @@ function TrainerMessagesContent() {
                                 minute: "2-digit",
                               })}
                             </span>
-                            {isTrainer && <CheckCheck className="h-3 w-3 text-emerald-400" />}
+                            {isMine && <CheckCheck className="h-3 w-3" />}
                           </div>
                         </div>
                       </div>
@@ -230,28 +256,24 @@ function TrainerMessagesContent() {
                 <div ref={chatBottomRef} />
               </div>
 
-              {/* Input Form */}
-              <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 flex items-center gap-2">
+              {/* Chat Input Bar */}
+              <form onSubmit={handleSendMessage} className="p-3.5 border-t border-slate-200 bg-white flex items-center gap-2">
                 <input
                   type="text"
                   value={inputContent}
                   onChange={(e) => setInputContent(e.target.value)}
-                  placeholder="پاسخ خود را برای شاگرد بنویسید..."
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600"
+                  placeholder="پاسخ خود به شاگرد را بنویسید..."
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={sending || !inputContent.trim()}
-                  className="p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl transition-all shadow-md disabled:opacity-50"
+                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white p-3 rounded-2xl transition-all shadow-xs shrink-0 flex items-center justify-center"
                 >
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 rotate-180" />}
+                  {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 rotate-180" />}
                 </button>
               </form>
             </>
-          ) : (
-            <div className="h-full flex items-center justify-center text-xs text-slate-400">
-              یک شاگرد را برای شروع گفتگو انتخاب کنید.
-            </div>
           )}
         </div>
       </div>
@@ -261,13 +283,7 @@ function TrainerMessagesContent() {
 
 export default function TrainerMessagesPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-[50vh] flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin text-emerald-600 mx-auto" /></div>}>
       <TrainerMessagesContent />
     </Suspense>
   )

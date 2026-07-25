@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Utensils, Plus, Search, Trash2, X, Flame, Scale, PieChart, Sparkles, Loader2, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
+import { DEFAULT_FOODS } from "@/lib/default-foods"
 
 interface FoodTrackerCardProps {
   targetCalories?: number
@@ -17,6 +18,8 @@ export function FoodTrackerCard({
   targetCarbs = 220,
   targetFats = 60,
 }: FoodTrackerCardProps) {
+  const getTodayStr = () => new Date().toISOString().split("T")[0]
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayStr())
   const [logs, setLogs] = useState<any[]>([])
   const [foodBank, setFoodBank] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,13 +42,18 @@ export function FoodTrackerCard({
   const [customFats, setCustomFats] = useState("")
 
   useEffect(() => {
-    fetchFoodLogs()
+    fetchFoodLogs(selectedDate)
+  }, [selectedDate])
+
+  useEffect(() => {
     fetchFoodBank()
   }, [])
 
-  async function fetchFoodLogs() {
+  async function fetchFoodLogs(dateStr: string = selectedDate) {
+
+    setLoading(true)
     try {
-      const res = await fetch("/api/client/food-log")
+      const res = await fetch(`/api/client/food-log?date=${dateStr}`)
       if (res.ok) {
         const data = await res.json()
         setLogs(data.logs || [])
@@ -57,17 +65,26 @@ export function FoodTrackerCard({
     }
   }
 
+
   async function fetchFoodBank() {
     try {
       const res = await fetch("/api/client/food-bank")
       if (res.ok) {
         const data = await res.json()
-        setFoodBank(data.foods || [])
+        if (data.foods && data.foods.length > 0) {
+          setFoodBank(data.foods)
+          return
+        }
       }
     } catch (e) {
       console.error(e)
     }
+
+    // Fallback default foods
+    setFoodBank(DEFAULT_FOODS)
   }
+
+
 
   // Calculate totals
   const totalCalories = logs.reduce((acc, item) => acc + (item.calories || 0), 0)
@@ -192,14 +209,47 @@ export function FoodTrackerCard({
           </div>
         </div>
 
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all shrink-0"
-        >
-          <Plus className="h-4 w-4" />
-          ثبت غذای جدید
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Date Selector Picker */}
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 text-xs">
+            <button
+              onClick={() => setSelectedDate(getTodayStr())}
+              className={`px-2.5 py-1 rounded-xl font-bold transition-all ${
+                selectedDate === getTodayStr() ? "bg-white text-amber-700 shadow-xs" : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              امروز
+            </button>
+
+            <button
+              onClick={() => {
+                const y = new Date()
+                y.setDate(y.getDate() - 1)
+                setSelectedDate(y.toISOString().split("T")[0])
+              }}
+              className="px-2.5 py-1 rounded-xl font-bold text-slate-600 hover:text-slate-900 transition-all"
+            >
+              دیروز
+            </button>
+
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-white border border-slate-200 rounded-xl px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none"
+            />
+          </div>
+
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            ثبت غذای جدید
+          </button>
+        </div>
       </div>
+
 
       {/* Calorie & Macro Progress Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 rounded-2xl bg-gradient-to-br from-amber-50/70 via-slate-50 to-orange-50/40 border border-amber-100">
@@ -211,8 +261,9 @@ export function FoodTrackerCard({
           </span>
           <div className="flex items-baseline gap-1">
             <span className="text-2xl font-extrabold text-amber-600 font-mono">
-              {Math.round(totalCalories).toLocaleString("fa-IR")}
+              {Math.round(totalCalories)}
             </span>
+
             <span className="text-xs text-slate-400 font-semibold">/ {targetCalories} kcal</span>
           </div>
           <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
@@ -475,25 +526,34 @@ export function FoodTrackerCard({
                 {selectedFood && (
                   <div className="p-4 bg-amber-50/60 rounded-2xl border border-amber-200 space-y-3 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800">ضریب مقدار مصرفی:</span>
-                      <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-amber-300">
+                      <span className="font-bold text-slate-800">تعداد / ضریب مصرف:</span>
+                      <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-xl border border-amber-300">
                         <button
                           type="button"
-                          onClick={() => setPortionAmount((prev) => Math.max(0.5, prev - 0.5))}
-                          className="h-6 w-6 bg-slate-100 rounded-lg font-black text-slate-700"
+                          onClick={() => setPortionAmount((prev) => Math.max(0.5, parseFloat((prev - 0.5).toFixed(1))))}
+                          className="h-7 w-7 bg-slate-100 rounded-lg font-black text-slate-700 hover:bg-slate-200"
                         >
                           -
                         </button>
-                        <span className="font-bold text-amber-700 px-2 font-mono">{portionAmount}x</span>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0.1"
+                          value={portionAmount}
+                          onChange={(e) => setPortionAmount(parseFloat(e.target.value) || 1)}
+                          className="w-14 text-center font-bold text-amber-800 font-mono focus:outline-none text-xs"
+                        />
+                        <span className="font-bold text-amber-700 text-xs">x</span>
                         <button
                           type="button"
-                          onClick={() => setPortionAmount((prev) => prev + 0.5)}
-                          className="h-6 w-6 bg-slate-100 rounded-lg font-black text-slate-700"
+                          onClick={() => setPortionAmount((prev) => parseFloat((prev + 0.5).toFixed(1)))}
+                          className="h-7 w-7 bg-slate-100 rounded-lg font-black text-slate-700 hover:bg-slate-200"
                         >
                           +
                         </button>
                       </div>
                     </div>
+
 
                     <div className="flex items-center justify-between pt-2 border-t border-amber-200/60 text-xs">
                       <span className="text-slate-500">کالری کل محاسبه شده:</span>

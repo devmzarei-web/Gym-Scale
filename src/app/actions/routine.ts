@@ -210,3 +210,12 @@ export async function deleteRoutine(routineId: string) {
   revalidatePath("/")
   return { success: true }
 }
+
+export async function unassignRoutineFromClient(historyId: string, clientId: string) {
+  await prisma.clientRoutineHistory.delete({
+    where: { id: historyId },
+  })
+  revalidatePath(`/clients/${clientId}`)
+  revalidatePath("/client")
+  return { success: true }
+}

@@ -15,11 +15,10 @@ export default async function DashboardPage() {
   })
 
   // Scoped clients query
-  const clientWhereClause = isSuperAdmin
-    ? {}
-    : activeTrainer
-    ? { trainerId: activeTrainer.id }
-    : {}
+  const clientWhereClause: any = { isDeleted: false }
+  if (!isSuperAdmin && activeTrainer) {
+    clientWhereClause.trainerId = activeTrainer.id
+  }
 
   const clients = await prisma.client.findMany({
     where: clientWhereClause,

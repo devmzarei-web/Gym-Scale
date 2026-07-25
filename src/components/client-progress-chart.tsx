@@ -14,6 +14,7 @@ import { TrendingUp, Plus, Scale, Activity, Trash2, List } from "lucide-react"
 import { Modal } from "@/components/ui/modal"
 import { logClientProgress, deleteClientProgressLog } from "@/app/actions/client"
 import { toast } from "sonner"
+import ExerciseProgressChart from "@/components/exercise-progress-chart"
 
 interface ProgressLog {
   id: string
@@ -29,9 +30,10 @@ interface ProgressLog {
 interface ClientProgressChartProps {
   clientId: string
   logs: ProgressLog[]
+  clientProfile?: any
 }
 
-export function ClientProgressChart({ clientId, logs }: ClientProgressChartProps) {
+export function ClientProgressChart({ clientId, logs, clientProfile }: ClientProgressChartProps) {
   const [activeMetric, setActiveMetric] = useState<"weight" | "chest" | "waist" | "biceps" | "thigh">("weight")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -92,7 +94,11 @@ export function ClientProgressChart({ clientId, logs }: ClientProgressChartProps
   }
 
   return (
-    <div className="space-y-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs">
+    <div className="space-y-6">
+      {/* Smart Anthropometric & Physiological Analytics Dashboard */}
+      <ExerciseProgressChart logs={logs as any} clientProfile={clientProfile} />
+
+      <div className="space-y-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs">
       {/* Header & Filter Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
@@ -334,6 +340,7 @@ export function ClientProgressChart({ clientId, logs }: ClientProgressChartProps
           </div>
         </form>
       </Modal>
+      </div>
     </div>
   )
 }

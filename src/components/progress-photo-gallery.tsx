@@ -6,6 +6,7 @@ import { Camera, Plus, Loader2, Lock, Eye, Trash2 } from "lucide-react"
 import { Modal } from "@/components/ui/modal"
 import { addProgressPhoto } from "@/app/actions/client"
 import { toast } from "sonner"
+import { compressImage } from "@/lib/image-compressor"
 
 interface ProgressPhotoGalleryProps {
   clientId: string
@@ -19,23 +20,22 @@ export function ProgressPhotoGallery({ clientId, photoUrls }: ProgressPhotoGalle
   const [uploading, setUploading] = useState(false)
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("حجم تصویر نباید بیشتر از ۵ مگابایت باشد.")
-      return
-    }
+    const rawFile = e.target.files?.[0]
+    if (!rawFile) return
 
     setUploading(true)
     try {
+      // Compress image client-side before uploading
+      const compressedFile = await compressImage(rawFile, 1200, 1200, 0.8)
+
       const formData = new FormData()
-      formData.append("file", file)
+      formData.append("file", compressedFile)
 
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       })
+
 
       const data = await res.json()
       if (!res.ok || !data.url) {

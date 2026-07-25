@@ -99,7 +99,18 @@ export function ClientFormModal() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">جنسیت</label>
+                <select
+                  name="gender"
+                  defaultValue="MALE"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 transition-colors"
+                >
+                  <option value="MALE">مرد</option>
+                  <option value="FEMALE">زن</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">سن</label>
                 <input

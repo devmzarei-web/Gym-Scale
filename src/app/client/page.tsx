@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 
 import { ClientRoutinesSection } from "./client-routines-section"
+import { ClientDietsSection } from "./client-diets-section"
 import { FoodTrackerCard } from "@/components/food-tracker-card"
 
 export const revalidate = 0
@@ -60,7 +61,6 @@ export default async function ClientDashboardPage() {
       },
       dietHistory: {
         orderBy: { createdAt: "desc" },
-        take: 1,
         include: {
           dietPlan: true,
         },
@@ -93,7 +93,8 @@ export default async function ClientDashboardPage() {
 
   const rawRoutines = client.routineHistory?.map((h: any) => h.routine).filter(Boolean) || []
   const assignedRoutines = Array.from(new Map(rawRoutines.map((r: any) => [r.id, r])).values())
-  const activeDiet = client.dietHistory?.[0]?.dietPlan
+  const rawDiets = client.dietHistory?.map((h: any) => h.dietPlan).filter(Boolean) || []
+  const assignedDiets = Array.from(new Map(rawDiets.map((d: any) => [d.id, d])).values())
   const latestWeight = client.progressLogs?.[0]?.weight || client.weight
   const heightInMeters = client.height ? client.height / 100 : null
   const bmi =
@@ -169,44 +170,8 @@ export default async function ClientDashboardPage() {
           {/* Workout Routines Card with Modal Switcher */}
           <ClientRoutinesSection assignedRoutines={assignedRoutines} clientId={client.id} />
 
-          {/* Diet Plan Card */}
-          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-5 flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-2 text-xs font-bold bg-teal-50 text-teal-700 px-3 py-1 rounded-xl border border-teal-200">
-                  <Utensils className="h-4 w-4" />
-                  برنامه تغذیه فعال
-                </span>
-              </div>
-
-              {activeDiet ? (
-                <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-slate-900 font-heading">
-                    {activeDiet.title}
-                  </h3>
-                  {activeDiet.description && (
-                    <p className="text-xs text-slate-500 line-clamp-2">
-                      {activeDiet.description}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="py-6 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                  هنوز برنامه تغذیه‌ای برای شما ثبت نشده است.
-                </div>
-              )}
-            </div>
-
-            {activeDiet && (
-              <Link
-                href={`/client/diets/${activeDiet.id}`}
-                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-3.5 px-4 rounded-2xl transition-all shadow-sm"
-              >
-                مشاهده کامل برنامه‌ تغذیه
-                <ChevronLeft className="h-4 w-4" />
-              </Link>
-            )}
-          </div>
+          {/* Diet Plans Card with Modal Switcher */}
+          <ClientDietsSection assignedDiets={assignedDiets} clientId={client.id} />
         </div>
       ) : (
         <div className="p-8 rounded-3xl bg-slate-50 border border-slate-200 text-center space-y-3">

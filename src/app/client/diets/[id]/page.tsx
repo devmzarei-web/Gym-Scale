@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
-import { Utensils, ArrowRight, Calendar } from "lucide-react"
+import { Utensils, ArrowRight, Calendar, Download } from "lucide-react"
+import { ClientDietContent } from "../client-diet-content"
 
 export const revalidate = 0
 
@@ -41,13 +42,23 @@ export default async function ClientDietViewPage({ params }: { params: Promise<{
           </h1>
         </div>
 
-        <Link
-          href="/client"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-all"
-        >
-          <ArrowRight className="h-4 w-4" />
-          بازگشت
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/api/diets/${dietPlan.id}/pdf`}
+            target="_blank"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 px-4 py-2 rounded-xl transition-all border border-teal-200"
+          >
+            <Download className="h-4 w-4" />
+            دانلود PDF
+          </Link>
+          <Link
+            href="/client"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-all"
+          >
+            <ArrowRight className="h-4 w-4" />
+            بازگشت
+          </Link>
+        </div>
       </div>
 
       {/* Content Container */}
@@ -58,10 +69,7 @@ export default async function ClientDietViewPage({ params }: { params: Promise<{
           </p>
         )}
 
-        <div
-          className="prose prose-emerald max-w-none text-xs sm:text-sm text-slate-800 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: dietPlan.content }}
-        />
+        <ClientDietContent dietPlan={dietPlan} />
       </div>
     </div>
   )

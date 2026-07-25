@@ -14,8 +14,11 @@ import {
   ArrowRight,
 } from "lucide-react"
 
+import ExerciseProgressChart from "@/components/exercise-progress-chart"
+
 export default function ProgressPage() {
   const [logs, setLogs] = useState<any[]>([])
+  const [clientProfile, setClientProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -37,8 +40,9 @@ export default function ProgressPage() {
     try {
       const res = await fetch("/api/client/progress")
       const data = await res.json()
-      if (res.ok && data.logs) {
-        setLogs(data.logs)
+      if (res.ok) {
+        if (data.logs) setLogs(data.logs)
+        if (data.client) setClientProfile(data.client)
       }
     } catch (err) {
       console.error(err)
@@ -127,6 +131,9 @@ export default function ProgressPage() {
           <span>{message.text}</span>
         </div>
       )}
+
+      {/* Physiological & Anthropometric Analytics Dashboard */}
+      <ExerciseProgressChart logs={logs} clientProfile={clientProfile} />
 
       {/* Log Progress Form */}
       <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-6">

@@ -13,6 +13,7 @@ export async function createClient(formData: FormData) {
   const age = formData.get("age") ? parseInt(formData.get("age") as string) : null
   const weight = formData.get("weight") ? parseFloat(formData.get("weight") as string) : null
   const height = formData.get("height") ? parseFloat(formData.get("height") as string) : null
+  const gender = (formData.get("gender") as string) || "MALE"
   const goals = (formData.get("goals") as string) || null
   const notes = (formData.get("notes") as string) || null
 
@@ -38,6 +39,7 @@ export async function createClient(formData: FormData) {
       age,
       weight,
       height,
+      gender,
       goals,
       notes,
       trainerId: trainer?.id || null,
@@ -57,6 +59,7 @@ export async function updateClient(clientId: string, formData: FormData) {
   const age = formData.get("age") ? parseInt(formData.get("age") as string) : null
   const weight = formData.get("weight") ? parseFloat(formData.get("weight") as string) : null
   const height = formData.get("height") ? parseFloat(formData.get("height") as string) : null
+  const gender = (formData.get("gender") as string) || null
   const goals = (formData.get("goals") as string) || null
   const notes = (formData.get("notes") as string) || null
 
@@ -69,6 +72,10 @@ export async function updateClient(clientId: string, formData: FormData) {
     height,
     goals,
     notes,
+  }
+
+  if (gender) {
+    updateData.gender = gender
   }
 
   if (rawPassword && rawPassword.trim() !== "") {

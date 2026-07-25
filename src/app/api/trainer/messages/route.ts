@@ -17,7 +17,7 @@ export async function GET(req: Request) {
 
     // Fetch trainer's assigned clients
     const clients = await prisma.client.findMany({
-      where: userRole === "SUPER_ADMIN" ? {} : { trainerId },
+      where: userRole === "SUPER_ADMIN" ? { isDeleted: false } : { trainerId, isDeleted: false },
       select: {
         id: true,
         name: true,

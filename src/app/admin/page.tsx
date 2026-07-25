@@ -17,6 +17,7 @@ export default async function AdminPage() {
   })
 
   const clients = await prisma.client.findMany({
+    where: { isDeleted: false },
     orderBy: { createdAt: "desc" },
     include: {
       trainer: true,

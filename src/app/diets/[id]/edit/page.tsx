@@ -24,6 +24,7 @@ export default async function EditDietPage({ params }: PageProps) {
   if (!diet) return notFound()
 
   const clients = await prisma.client.findMany({
+    where: { isDeleted: false },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   })

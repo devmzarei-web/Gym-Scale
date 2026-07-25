@@ -4,12 +4,19 @@ import { useState } from "react"
 import { Plus, X, Loader2, ChefHat } from "lucide-react"
 import { createRecipe } from "@/app/actions/recipe"
 import { toast } from "sonner"
+import { DEFAULT_FOODS } from "@/lib/default-foods"
 
 const categories = ["صبحانه", "ناهار/شام", "میان وعده", "پروتئینی", "دسر رژیمی"]
 
 export function AddRecipeModal() {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [calories, setCalories] = useState("")
+  const [protein, setProtein] = useState("")
+  const [carbs, setCarbs] = useState("")
+  const [fats, setFats] = useState("")
+  const [ingredients, setIngredients] = useState("")
+
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -94,6 +101,38 @@ export function AddRecipeModal() {
                 </div>
               </div>
 
+              {/* Food Bank Auto Picker */}
+              <div className="p-3 bg-amber-50/80 rounded-2xl border border-amber-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-extrabold text-amber-900 flex items-center gap-1.5">
+                    🔍 انتخاب مواد اولیه از بانک غذا (محاسبه اتوماتیک)
+                  </label>
+                </div>
+                <select
+                  onChange={(e) => {
+                    const foodName = e.target.value
+                    if (!foodName) return
+                    const food = DEFAULT_FOODS.find((f) => f.name === foodName)
+                    if (!food) return
+
+                    setIngredients((prev) => (prev ? `${prev}\n- ${food.name} (${food.unitLabel})` : `- ${food.name} (${food.unitLabel})`))
+                    setCalories((prev) => (parseFloat(prev || "0") + food.calories).toString())
+                    setProtein((prev) => (parseFloat(prev || "0") + food.protein).toFixed(1))
+                    setCarbs((prev) => (parseFloat(prev || "0") + food.carbs).toFixed(1))
+                    setFats((prev) => (parseFloat(prev || "0") + food.fats).toFixed(1))
+                    e.target.value = ""
+                  }}
+                  className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none"
+                >
+                  <option value="">-- کلیک کنید تا ماده غذایی انتخاب شود --</option>
+                  {DEFAULT_FOODS.map((f) => (
+                    <option key={f.name} value={f.name}>
+                      {f.name} ({f.calories} kcal | P: {f.protein}g)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Macros Grid */}
               <div className="grid grid-cols-4 gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <div>
@@ -101,8 +140,10 @@ export function AddRecipeModal() {
                   <input
                     type="number"
                     name="calories"
+                    value={calories}
+                    onChange={(e) => setCalories(e.target.value)}
                     placeholder="350"
-                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-teal-600"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-900 focus:outline-hidden focus:border-teal-600"
                   />
                 </div>
                 <div>
@@ -111,8 +152,10 @@ export function AddRecipeModal() {
                     type="number"
                     step="0.1"
                     name="protein"
+                    value={protein}
+                    onChange={(e) => setProtein(e.target.value)}
                     placeholder="30"
-                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-teal-600"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold text-emerald-700 focus:outline-hidden focus:border-teal-600"
                   />
                 </div>
                 <div>
@@ -121,8 +164,10 @@ export function AddRecipeModal() {
                     type="number"
                     step="0.1"
                     name="carbs"
+                    value={carbs}
+                    onChange={(e) => setCarbs(e.target.value)}
                     placeholder="45"
-                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-teal-600"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold text-blue-700 focus:outline-hidden focus:border-teal-600"
                   />
                 </div>
                 <div>
@@ -131,8 +176,10 @@ export function AddRecipeModal() {
                     type="number"
                     step="0.1"
                     name="fats"
+                    value={fats}
+                    onChange={(e) => setFats(e.target.value)}
                     placeholder="8"
-                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-teal-600"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold text-amber-700 focus:outline-hidden focus:border-teal-600"
                   />
                 </div>
               </div>
@@ -144,11 +191,14 @@ export function AddRecipeModal() {
                 <textarea
                   name="ingredients"
                   required
+                  value={ingredients}
+                  onChange={(e) => setIngredients(e.target.value)}
                   rows={3}
                   placeholder="مثال:&#10;- 50 گرم جو پرک&#10;- 1 اسکوپ وی پروتئین&#10;- 150 میلی‌لیتر شیر کم‌چرب"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-teal-600 transition-colors resize-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-teal-600 transition-colors resize-none font-mono"
                 />
               </div>
+
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">

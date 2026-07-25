@@ -9,6 +9,8 @@ import { RoutineActions } from "@/app/routines/[id]/routine-actions"
 import { DietActions } from "@/app/diets/[id]/diet-actions"
 import { AssignRoutineModal } from "./assign-routine-modal"
 import { AssignDietModal } from "./assign-diet-modal"
+import { UnassignDietButton } from "./unassign-diet-button"
+import { UnassignRoutineButton } from "./unassign-routine-button"
 import { TdeeCalculatorModal } from "@/components/tdee-calculator-modal"
 import { ClientProgressChart } from "@/components/client-progress-chart"
 import { ProgressPhotoGallery } from "@/components/progress-photo-gallery"
@@ -212,8 +214,8 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
         )}
       </div>
 
-      {/* Progress Chart Component */}
-      <ClientProgressChart clientId={client.id} logs={client.progressLogs} />
+      {/* Progress Chart & Anthropometric Analytics Component */}
+      <ClientProgressChart clientId={client.id} logs={client.progressLogs} clientProfile={client} />
 
       {/* Progress Photo Gallery Component */}
       <ProgressPhotoGallery clientId={client.id} photoUrls={client.photoUrls} />
@@ -244,38 +246,53 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
             </div>
           </div>
 
-          {currentRoutine ? (
-            <div className="space-y-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-sm text-slate-900">{currentRoutine.title}</h3>
-                <span className="text-[10px] text-slate-500 font-semibold">
-                  {currentRoutine.workoutDays.length} روز تمرینی
-                </span>
-              </div>
-              {currentRoutine.description && (
-                <p className="text-xs text-slate-600">{currentRoutine.description}</p>
-              )}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                <Link
-                  href={`/routines/${currentRoutine.id}`}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1"
-                >
-                  مشاهده جزئیات
-                  <ArrowRight className="h-3.5 w-3.5 rotate-180" />
-                </Link>
-
-                <a
-                  href={`/api/routines/${currentRoutine.id}/pdf?clientId=${client.id}`}
-                  download
-                  className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition-all shadow-sm"
-                >
-                  دانلود برنامه تمرینی شاگرد
-                </a>
-              </div>
+          {client.routineHistory && client.routineHistory.length > 0 ? (
+            <div className="space-y-3">
+              {client.routineHistory.map((historyItem: any) => {
+                const routine = historyItem.routine
+                if (!routine) return null
+                return (
+                  <div key={historyItem.id} className="space-y-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-sm text-slate-900">{routine.title}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                          {routine.workoutDays?.length || 0} روز تمرینی
+                        </span>
+                        <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                          {new Date(historyItem.createdAt).toLocaleDateString("fa-IR")}
+                        </span>
+                      </div>
+                    </div>
+                    {routine.description && (
+                      <p className="text-xs text-slate-600">{routine.description}</p>
+                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/routines/${routine.id}`}
+                          className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 bg-white border border-slate-200 px-3 py-2 rounded-xl transition-all"
+                        >
+                          مشاهده جزئیات
+                          <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                        </Link>
+                        <a
+                          href={`/api/routines/${routine.id}/pdf?clientId=${client.id}`}
+                          download
+                          className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                        >
+                          دانلود PDF
+                        </a>
+                      </div>
+                      <UnassignRoutineButton historyId={historyItem.id} clientId={client.id} />
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           ) : (
             <div className="p-8 rounded-2xl border border-dashed border-slate-300 text-center space-y-2">
-              <p className="text-xs text-slate-500">برنامه تمرینی فعال برای این شاگرد ثبت نشده است.</p>
+              <p className="text-xs text-slate-500">هیچ برنامه تمرینی برای این شاگرد ثبت نشده است.</p>
             </div>
           )}
         </div>
@@ -303,35 +320,48 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
             </div>
           </div>
 
-          {currentDiet ? (
-            <div className="space-y-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-sm text-slate-900">{currentDiet.title}</h3>
-              </div>
-              {currentDiet.description && (
-                <p className="text-xs text-slate-600">{currentDiet.description}</p>
-              )}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                <Link
-                  href={`/diets/${currentDiet.id}`}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1"
-                >
-                  مشاهده جزئیات
-                  <ArrowRight className="h-3.5 w-3.5 rotate-180" />
-                </Link>
-
-                <a
-                  href={`/api/diets/${currentDiet.id}/pdf?clientId=${client.id}`}
-                  download
-                  className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-xl transition-all shadow-sm"
-                >
-                  دانلود برنامه تغذیه شاگرد
-                </a>
-              </div>
+          {client.dietHistory && client.dietHistory.length > 0 ? (
+            <div className="space-y-3">
+              {client.dietHistory.map((historyItem: any) => {
+                const diet = historyItem.dietPlan
+                if (!diet) return null
+                return (
+                  <div key={historyItem.id} className="space-y-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-sm text-slate-900">{diet.title}</h3>
+                      <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+                        {new Date(historyItem.createdAt).toLocaleDateString("fa-IR")}
+                      </span>
+                    </div>
+                    {diet.description && (
+                      <p className="text-xs text-slate-600">{diet.description}</p>
+                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/diets/${diet.id}`}
+                          className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 bg-white border border-slate-200 px-3 py-2 rounded-xl transition-all"
+                        >
+                          مشاهده جزئیات
+                          <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                        </Link>
+                        <a
+                          href={`/api/diets/${diet.id}/pdf?clientId=${client.id}`}
+                          download
+                          className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                        >
+                          دانلود PDF
+                        </a>
+                      </div>
+                      <UnassignDietButton historyId={historyItem.id} clientId={client.id} />
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           ) : (
             <div className="p-8 rounded-2xl border border-dashed border-slate-300 text-center space-y-2">
-              <p className="text-xs text-slate-500">برنامه تغذیه فعال برای این شاگرد ثبت نشده است.</p>
+              <p className="text-xs text-slate-500">هیچ برنامه تغذیه‌ای برای این شاگرد ثبت نشده است.</p>
             </div>
           )}
         </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
 
+
 export async function GET() {
   try {
     const session = await auth()
@@ -11,12 +12,25 @@ export async function GET() {
       return NextResponse.json({ error: "غیرمجاز" }, { status: 401 })
     }
 
+    const client = await (prisma.client as any).findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        age: true,
+        height: true,
+        weight: true,
+        gender: true,
+        goals: true,
+      },
+    })
+
     const logs = await prisma.clientProgressLog.findMany({
       where: { clientId: userId },
       orderBy: { loggedAt: "desc" },
     })
 
-    return NextResponse.json({ logs })
+    return NextResponse.json({ logs, client })
   } catch (error: any) {
     console.error("Fetch progress logs error:", error)
     return NextResponse.json({ error: "خطا در دریافت تاریخچه پیشرفت." }, { status: 500 })

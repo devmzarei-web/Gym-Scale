@@ -16,6 +16,11 @@ enum Day {
   FRIDAY
 }
 
+enum TrainerTier {
+  FREE
+  PRO
+}
+
 enum Role {
   SUPER_ADMIN
   TRAINER
@@ -58,6 +63,11 @@ model Trainer {
   canCreateRoutines Boolean   @default(true)
   canAccessRecipes  Boolean   @default(true)
   expiresAt         DateTime? // Expiration date for demo access
+  
+  tier              TrainerTier @default(FREE)
+  aiQuota           Int       @default(3) // AI generation quota
+  aiQuotaResetAt    DateTime? 
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -83,6 +93,7 @@ model Client {
   age              Int?
   weight           Float?
   height           Float?
+  gender           String?  @default("MALE")
   goals            String?
   notes            String?
   photoUrls        String[]
@@ -111,7 +122,7 @@ model ClientProgressLog {
   notes     String?
   loggedAt  DateTime @default(now())
 
-  @@index([clientId])
+  @@index([clientId, loggedAt])
 }
 
 model WorkoutSessionLog {
@@ -127,7 +138,7 @@ model WorkoutSessionLog {
   setDetails         String?  // JSON string containing set-by-set weight and reps
   completedAt        DateTime @default(now())
 
-  @@index([clientId])
+  @@index([clientId, completedAt])
 }
 
 model Message {
@@ -141,6 +152,7 @@ model Message {
 
   @@index([senderId])
   @@index([receiverId])
+  @@index([senderId, receiverId, createdAt])
 }
 
 model Subscription {
@@ -160,6 +172,7 @@ model Subscription {
 
   @@index([clientId])
   @@index([trainerId])
+  @@index([clientId, status, endDate])
 }
 
 model Routine {
@@ -176,6 +189,8 @@ model Routine {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([trainerId, isTemplate])
 }
 
 model ClientRoutineHistory {
@@ -198,12 +213,15 @@ model DietPlan {
   title       String
   description String?
   content     String   // Rich HTML content of the diet plan
+  sectionsJson Json?   // Structured JSON content of the diet plan
   isTemplate  Boolean  @default(true) // True for templates, False for assigned clones
 
   history     ClientDietHistory[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([trainerId, isTemplate])
 }
 
 model ClientDietHistory {
@@ -255,6 +273,8 @@ model ExerciseDictionary {
   videoUrl    String?
   gifUrl      String?  // Direct GIF animation URL / preview
   createdAt   DateTime @default(now())
+
+  @@index([muscleGroup])
 }
 
 model Recipe {
@@ -286,6 +306,8 @@ model FoodDictionary {
   carbs       Float    // grams
   fats        Float    // grams
   createdAt   DateTime @default(now())
+
+  @@index([category, name])
 }
 
 model ClientFoodLog {
