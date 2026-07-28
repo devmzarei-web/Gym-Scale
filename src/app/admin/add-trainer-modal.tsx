@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ShieldCheck, Plus, X, Loader2 } from "lucide-react"
+import { ShieldCheck, Plus, X, Loader2, Zap } from "lucide-react"
 import { createTrainerAccount } from "@/app/actions/admin"
 import { toast } from "sonner"
 
@@ -17,6 +17,7 @@ export function AddTrainerModal() {
       const formData = new FormData(e.currentTarget)
       await createTrainerAccount(formData)
       setIsOpen(false)
+      toast.success("حساب مربی با موفقیت ایجاد شد.")
     } catch (err: any) {
       toast.error(err.message || "خطا در ساخت حساب مربی")
     } finally {
@@ -102,6 +103,40 @@ export function AddTrainerModal() {
                   placeholder="••••••••"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600 transition-colors"
                 />
+              </div>
+
+              {/* AI Quota & Tier Settings */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
+                <span className="block text-xs font-bold text-emerald-900 flex items-center gap-1.5 font-heading">
+                  <Zap className="h-4 w-4 text-emerald-600" />
+                  تنظیم اولیه سهمیه هوش مصنوعی مربی
+                </span>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-emerald-800 font-semibold mb-1">سطح حساب (Tier)</label>
+                    <select
+                      name="tier"
+                      defaultValue="FREE"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-bold"
+                    >
+                      <option value="FREE">رایگان (FREE)</option>
+                      <option value="PRO">حرفه‌ای (PRO)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-emerald-800 font-semibold mb-1">سهمیه روزانه هوش مصنوعی</label>
+                    <input
+                      type="number"
+                      name="aiQuota"
+                      defaultValue={3}
+                      min={0}
+                      max={999}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Demo Account Switch */}

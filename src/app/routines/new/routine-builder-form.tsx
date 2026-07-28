@@ -17,9 +17,16 @@ import {
   ArrowDown,
   Layers,
   Sparkles,
+  Trophy,
+  Activity,
+  Check,
+  Zap,
+  UserCheck,
+  RefreshCw,
 } from "lucide-react"
 import { createRoutine, updateRoutine } from "@/app/actions/routine"
 import { GifUploadInput } from "@/components/gif-upload-input"
+import { Modal } from "@/components/ui/modal"
 import { toast } from "sonner"
 
 const DAYS_OF_WEEK = [
@@ -73,9 +80,20 @@ interface DayItem {
   exercises: ExerciseItem[]
 }
 
+interface ClientData {
+  id: string
+  name: string
+  age?: number | null
+  weight?: number | null
+  height?: number | null
+  gender?: string | null
+  goals?: string | null
+  primarySport?: string | null
+}
+
 interface RoutineBuilderProps {
   exerciseDictionary: Array<{ id: string; name: string; muscleGroup: string; gifUrl?: string | null }>
-  clients: Array<{ id: string; name: string }>
+  clients: ClientData[]
   initialClientId?: string
   existingRoutine?: any
 }
@@ -92,12 +110,142 @@ export function RoutineBuilderForm({
   const [description, setDescription] = useState(existingRoutine?.description || "")
   const [clientId, setClientId] = useState(initialClientId || "")
   const [isTemplate, setIsTemplate] = useState(existingRoutine ? existingRoutine.isTemplate : !initialClientId)
+  const [sportContext, setSportContext] = useState<any>(existingRoutine?.sportContext || null)
+
+  // AI Generator Modal States
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false)
+  const [aiModalClientId, setAiModalClientId] = useState(initialClientId || "")
+  const [aiPrimarySport, setAiPrimarySport] = useState("کراس‌فیت")
+  const [aiTrainingStyle, setAiTrainingStyle] = useState<"CROSSFIT" | "BODYBUILDING" | "SPORT_SPECIFIC" | "CALISTHENICS">("CROSSFIT")
+  const [aiCustomSport, setAiCustomSport] = useState("")
+  const [aiFitnessGoal, setAiFitnessGoal] = useState("افزایش توان تنفسی، قدرت انفجاری و آمادگی همه‌جانبه (WOD / MetCon)")
+  const [aiDaysPerWeek, setAiDaysPerWeek] = useState(4)
+  const [aiSessionDuration, setAiSessionDuration] = useState(60)
+  const [aiFitnessLevel, setAiFitnessLevel] = useState("متوسط")
+  const [aiTrainerNotes, setAiTrainerNotes] = useState("")
+  const [aiSelectedModel, setAiSelectedModel] = useState("gpt-4o")
+
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResult, setAiResult] = useState<{ routineSummary: any; workoutDays: any[] } | null>(null)
 
   // Track collapsed state per day ID
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({})
 
   // Track last selected muscle group across the form
   const [lastMuscleGroup, setLastMuscleGroup] = useState<string>("سینه")
+
+  // Auto populate client stats when selecting a client in AI Modal
+  function handleAiModalClientChange(cId: string) {
+    setAiModalClientId(cId)
+    const selectedClient = clients.find((c) => c.id === cId)
+    if (selectedClient) {
+      if (selectedClient.primarySport) {
+        setAiPrimarySport(selectedClient.primarySport)
+        if (selectedClient.primarySport.includes("کراس") || selectedClient.primarySport.toLowerCase().includes("crossfit")) {
+          setAiTrainingStyle("CROSSFIT")
+        }
+      }
+      if (selectedClient.goals) {
+        setAiFitnessGoal(`مکمل ${selectedClient.goals}`)
+      }
+    }
+  }
+
+  async function handleGenerateAiRoutine() {
+    setAiLoading(true)
+    setAiResult(null)
+
+    const selectedClient = clients.find((c) => c.id === aiModalClientId)
+    const finalSport = aiPrimarySport === "سایر" ? aiCustomSport || "ورزش عمومی" : aiPrimarySport
+
+    try {
+      const res = await fetch("/api/ai/generate-routine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: aiModalClientId || undefined,
+          clientName: selectedClient?.name,
+          clientAge: selectedClient?.age,
+          clientWeight: selectedClient?.weight,
+          clientHeight: selectedClient?.height,
+          clientGender: selectedClient?.gender,
+          clientGoals: selectedClient?.goals,
+          primarySport: finalSport,
+          trainingStyle: aiTrainingStyle,
+          fitnessGoal: aiFitnessGoal,
+          daysPerWeek: aiDaysPerWeek,
+          sessionDurationMinutes: aiSessionDuration,
+          fitnessLevel: aiFitnessLevel,
+          notes: aiTrainerNotes,
+          selectedModel: aiSelectedModel,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "خطا در تولید برنامه با هوش مصنوعی")
+      }
+
+      setAiResult(data)
+      toast.success("برنامه تمرینی مکمل با موفقیت توسط هوش مصنوعی طراحی شد!")
+    } catch (err: any) {
+      toast.error(err.message || "خطا در برقراری ارتباط با هوش مصنوعی")
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  function handleApplyAiRoutineToForm() {
+    if (!aiResult) return
+
+    const { routineSummary, workoutDays } = aiResult
+
+    if (routineSummary?.title) {
+      setTitle(routineSummary.title)
+    }
+    if (routineSummary?.description) {
+      setDescription(routineSummary.description)
+    }
+    if (aiModalClientId) {
+      setClientId(aiModalClientId)
+      setIsTemplate(false)
+    }
+
+    setSportContext(routineSummary)
+
+    // Convert AI workoutDays to DayItem[]
+    const formattedDays: DayItem[] = workoutDays.map((d: any, dIdx: number) => {
+      const dayKey = (d.day as DayKey) || DAYS_OF_WEEK[dIdx % DAYS_OF_WEEK.length].id
+
+      return {
+        id: `day-ai-${Date.now()}-${dIdx}`,
+        day: dayKey,
+        label: d.label || `روز ${dIdx + 1}`,
+        exercises: (d.exercises || []).map((ex: any, exIdx: number) => {
+          const dictMatch = exerciseDictionary.find((dict) => dict.name === ex.name)
+
+          return {
+            id: `ex-ai-${Date.now()}-${dIdx}-${exIdx}`,
+            name: ex.name,
+            muscleGroup: ex.muscleGroup || "سایر",
+            isCustom: !dictMatch,
+            sets: Number(ex.sets) || 3,
+            repetitions: String(ex.repetitions || "10-12"),
+            restTime: ex.restTime || "60 ثانیه",
+            weight: ex.weight || "",
+            customDescription: ex.customDescription || "",
+            gifUrl: dictMatch?.gifUrl || "",
+            groupType: (ex.groupType as GroupTypeKey) || "NORMAL",
+            groupId: null,
+          }
+        }),
+      }
+    })
+
+    setDays(formattedDays)
+    setIsAiModalOpen(false)
+    toast.success("برنامه هوشمند در فرم بارگذاری شد.")
+  }
 
   const [days, setDays] = useState<DayItem[]>(
     existingRoutine
@@ -289,6 +437,7 @@ export function RoutineBuilderForm({
         title,
         description,
         isTemplate,
+        sportContext: sportContext || undefined,
         clientId: clientId || undefined,
         workoutDays: days.map((d) => {
           const formattedExercises: any[] = []
@@ -440,14 +589,25 @@ export function RoutineBuilderForm({
           </div>
         </div>
 
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-xs disabled:opacity-50"
-        >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {existingRoutine ? "به‌روزرسانی برنامه" : "ذخیره برنامه تمرینی"}
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsAiModalOpen(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Sparkles className="h-4 w-4 text-amber-300 animate-pulse" />
+            طراحی برنامه با هوش مصنوعی (AI)
+          </button>
+
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-xs disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {existingRoutine ? "به‌روزرسانی برنامه" : "ذخیره برنامه تمرینی"}
+          </button>
+        </div>
       </div>
 
       {/* Basic Meta Form */}
@@ -969,6 +1129,396 @@ export function RoutineBuilderForm({
           )
         })}
       </div>
+
+      {/* AI Routine Generator Modal */}
+      <Modal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        title="طراحی هوشمند برنامه تمرینی مکمل (مبتنی بر هوش مصنوعی)"
+        titleIcon={<Sparkles className="h-5 w-5 text-emerald-600 animate-pulse" />}
+        maxWidth="max-w-4xl"
+      >
+        <div className="space-y-5 max-h-[80vh] overflow-y-auto pr-1">
+          {/* Step 1: Select Client & Sport */}
+          <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-200 pb-2">
+              <UserCheck className="h-4 w-4 text-emerald-600" />
+              ۱. انتخاب شاگرد و دریافت اطلاعات بدنی
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">شاگرد مورد نظر</label>
+                <select
+                  value={aiModalClientId}
+                  onChange={(e) => handleAiModalClientChange(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 transition-colors"
+                >
+                  <option value="">بدون انتخاب شاگرد (برنامه عمومی)</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.primarySport ? `(${c.primarySport})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">ورزش اصلی / تخصصی (Primary Sport)</label>
+                <select
+                  value={aiPrimarySport}
+                  onChange={(e) => {
+                    setAiPrimarySport(e.target.value)
+                    if (e.target.value === "کراس‌فیت") setAiTrainingStyle("CROSSFIT")
+                  }}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 transition-colors"
+                >
+                  <option value="کراس‌فیت">کراس‌فیت (CrossFit WOD & Functional Fitness)</option>
+                  <option value="شنا">شنا (Swimming)</option>
+                  <option value="فوتبال">فوتبال (Soccer/Football)</option>
+                  <option value="بسکتبال">بسکتبال (Basketball)</option>
+                  <option value="والیبال">والیبال (Volleyball)</option>
+                  <option value="دو و میدانی">دو و میدانی (Running/Track)</option>
+                  <option value="دوچرخه‌سواری">دوچرخه‌سواری (Cycling)</option>
+                  <option value="کشتی">کشتی (Wrestling)</option>
+                  <option value="هنرهای رزمی">هنرهای رزمی (MMA / Martial Arts)</option>
+                  <option value="تنیس">تنیس (Tennis)</option>
+                  <option value="بدنسازی">بدنسازی و فیتنس عمومی (Bodybuilding)</option>
+                  <option value="سایر">سایر ورزش‌ها (تایپ دستی...)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Training Style Selector */}
+            <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
+              <label className="block text-[11px] font-bold text-slate-800">سبک و نوع تمرین (Training Methodology)</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiTrainingStyle("CROSSFIT")
+                    setAiFitnessGoal("افزایش توان تنفسی، قدرت انفجاری و آمادگی همه‌جانبه (WOD / MetCon)")
+                  }}
+                  className={`p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between gap-1 ${
+                    aiTrainingStyle === "CROSSFIT"
+                      ? "bg-amber-50 border-amber-300 text-amber-950 font-bold shadow-xs"
+                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="text-xs font-extrabold flex items-center gap-1">🏋️ کراس‌فیت و WOD</span>
+                  <span className="text-[10px] text-amber-800/80 font-normal">وزنه المپیکی + ژیمناستیک</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiTrainingStyle("BODYBUILDING")
+                    setAiFitnessGoal("افزایش حجم عضلانی، هیپرتروفی و تفکیک عضلات")
+                  }}
+                  className={`p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between gap-1 ${
+                    aiTrainingStyle === "BODYBUILDING"
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-950 font-bold shadow-xs"
+                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="text-xs font-extrabold flex items-center gap-1">🏋️‍♂️ بدنسازی و وزنه</span>
+                  <span className="text-[10px] text-emerald-800/80 font-normal">قدرتی، سیم‌کش و دستگاه</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiTrainingStyle("SPORT_SPECIFIC")
+                    setAiFitnessGoal("تقویت بیومکانیک و گروه‌های عضلانی مکمل رشته ورزشی")
+                  }}
+                  className={`p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between gap-1 ${
+                    aiTrainingStyle === "SPORT_SPECIFIC"
+                      ? "bg-blue-50 border-blue-300 text-blue-950 font-bold shadow-xs"
+                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="text-xs font-extrabold flex items-center gap-1">🎯 مکمل تخصصی</span>
+                  <span className="text-[10px] text-blue-800/80 font-normal">پشتیبانی رشته ورزشی</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiTrainingStyle("CALISTHENICS")
+                    setAiFitnessGoal("افزایش استقامت عضلانی، کالیستنیکس و کنترل وزن بدن")
+                  }}
+                  className={`p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between gap-1 ${
+                    aiTrainingStyle === "CALISTHENICS"
+                      ? "bg-purple-50 border-purple-300 text-purple-950 font-bold shadow-xs"
+                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="text-xs font-extrabold flex items-center gap-1">🤸 کالیستنیکس</span>
+                  <span className="text-[10px] text-purple-800/80 font-normal">وزن بدن و چابکی</span>
+                </button>
+              </div>
+            </div>
+
+            {aiPrimarySport === "سایر" && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">عنوان ورزش اصلی</label>
+                <input
+                  type="text"
+                  value={aiCustomSport}
+                  onChange={(e) => setAiCustomSport(e.target.value)}
+                  placeholder="مثال: صخره‌نوردی، پدل، اسکی..."
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600"
+                />
+              </div>
+            )}
+
+            {/* Client preview card if selected */}
+            {aiModalClientId && (() => {
+              const selectedClient = clients.find((c) => c.id === aiModalClientId)
+              if (!selectedClient) return null
+              return (
+                <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs space-y-1.5">
+                  <div className="flex items-center justify-between font-bold text-emerald-900">
+                    <span>اطلاعات شاگرد: {selectedClient.name}</span>
+                    {selectedClient.primarySport && (
+                      <span className="bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-md text-[10px]">
+                        ورزش تخصصی: {selectedClient.primarySport}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-[11px] text-emerald-800 text-center bg-white/70 p-2 rounded-lg border border-emerald-100">
+                    <div>سن: <strong>{selectedClient.age ? `${selectedClient.age} سال` : "-"}</strong></div>
+                    <div>وزن: <strong>{selectedClient.weight ? `${selectedClient.weight}kg` : "-"}</strong></div>
+                    <div>قد: <strong>{selectedClient.height ? `${selectedClient.height}cm` : "-"}</strong></div>
+                    <div>جنسیت: <strong>{selectedClient.gender === "FEMALE" ? "خانم" : "آقا"}</strong></div>
+                  </div>
+                  {selectedClient.goals && (
+                    <p className="text-[11px] text-emerald-800">
+                      <strong>هدف شاگرد:</strong> {selectedClient.goals}
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+
+          {/* Step 2: Training Parameters */}
+          <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-200 pb-2">
+              <Activity className="h-4 w-4 text-emerald-600" />
+              ۲. تنظیم پارامترهای تمرینی و مدل هوش مصنوعی
+            </h3>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">هدف اختصاصی برنامه تمرینی</label>
+              <input
+                type="text"
+                value={aiFitnessGoal}
+                onChange={(e) => setAiFitnessGoal(e.target.value)}
+                placeholder="مثال: افزایش قدرت انفجاری پاها و ثبات کتف جهت شنای بهتر"
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">تعداد روزهای تمرین در هفته</label>
+                <div className="grid grid-cols-4 gap-1">
+                  {[3, 4, 5, 6].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setAiDaysPerWeek(num)}
+                      className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${
+                        aiDaysPerWeek === num
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      {num} روز
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">مدت زمان هر جلسه</label>
+                <div className="grid grid-cols-4 gap-1">
+                  {[45, 60, 75, 90].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setAiSessionDuration(mins)}
+                      className={`py-1.5 text-[11px] font-bold rounded-lg border transition-all ${
+                        aiSessionDuration === mins
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      {mins}m
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">سطح آمادگی ورزشکار</label>
+                <select
+                  value={aiFitnessLevel}
+                  onChange={(e) => setAiFitnessLevel(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600"
+                >
+                  <option value="مبتدی">مبتدی (Beginner)</option>
+                  <option value="متوسط">متوسط (Intermediate)</option>
+                  <option value="پیشرفته">پیشرفته (Advanced / Pro)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Model Selector & Notes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>مدل هوش مصنوعی (GapGPT Engine)</span>
+                  <span className="text-[10px] text-emerald-600 font-bold">پشتیبانی از برترین مدل‌ها</span>
+                </label>
+                <select
+                  value={aiSelectedModel}
+                  onChange={(e) => setAiSelectedModel(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 font-semibold"
+                >
+                  <option value="gpt-4o">GPT-4o (پیشنهادی - هوشمندترین مدل طراحی علمی)</option>
+                  <option value="gpt-4o-mini">GPT-4o Mini (سریع و بهینه)</option>
+                  <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (فوق دقیق در بیومکانیک)</option>
+                  <option value="deepseek-chat">DeepSeek Chat (مدل استدلالی هوشمند)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">یادداشت و ملاحظات تخصصی مربی</label>
+                <input
+                  type="text"
+                  value={aiTrainerNotes}
+                  onChange={(e) => setAiTrainerNotes(e.target.value)}
+                  placeholder="مثال: سابقه آسیب دیدگی سرشانه، تمرکز بیشتر روی شکم..."
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600"
+                />
+              </div>
+            </div>
+
+            {/* Submit button */}
+            <button
+              type="button"
+              onClick={handleGenerateAiRoutine}
+              disabled={aiLoading}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-extrabold py-3 rounded-xl transition-all shadow-md disabled:opacity-50"
+            >
+              {aiLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-amber-300" />
+                  هوش مصنوعی در حال تحلیل بیومکانیک و طراحی برنامه تمرینی...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 text-amber-300" />
+                  تولید برنامه تمرینی علمی با هوش مصنوعی
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* AI Result Preview Card */}
+          {aiResult && (
+            <div className="space-y-4 p-5 rounded-2xl bg-white border-2 border-emerald-500 shadow-md animate-in fade-in duration-300">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-amber-500" />
+                  <h3 className="font-extrabold text-sm text-slate-900 font-heading">
+                    {aiResult.routineSummary?.title || "برنامه پیش‌فرض تولید شده"}
+                  </h3>
+                </div>
+                <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                  {aiResult.workoutDays?.length || 0} روز تمرینی
+                </span>
+              </div>
+
+              {aiResult.routineSummary?.description && (
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {aiResult.routineSummary.description}
+                </p>
+              )}
+
+              {/* Target muscle groups badges */}
+              {aiResult.routineSummary?.targetMuscleGroups?.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                  <span className="text-[11px] font-bold text-slate-500">گروه‌های عضلانی هدف:</span>
+                  {aiResult.routineSummary.targetMuscleGroups.map((m: string, i: number) => (
+                    <span
+                      key={i}
+                      className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-lg text-[11px] font-bold"
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Coach notes callout */}
+              {aiResult.routineSummary?.coachNotes && (
+                <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-0.5">
+                  <strong className="block text-[11px] text-amber-800">💡 توصیه مربی و دستورالعمل اجرایی:</strong>
+                  <p>{aiResult.routineSummary.coachNotes}</p>
+                </div>
+              )}
+
+              {/* Days Accordion / List */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <span className="text-[11px] font-bold text-slate-700 block">ساختار روزهای تمرینی:</span>
+                <div className="grid grid-cols-1 gap-2">
+                  {aiResult.workoutDays?.map((d: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs"
+                    >
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-slate-900 block">{d.label || `روز ${idx + 1}`}</span>
+                        <span className="text-[10px] text-slate-500">
+                          {d.exercises?.length || 0} حرکت طراحی شده
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
+                        <Check className="h-3.5 w-3.5" />
+                        آماده بارگذاری
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-3 flex items-center justify-between gap-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleGenerateAiRoutine}
+                  className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-emerald-700 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  تولید مجدد
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleApplyAiRoutineToForm}
+                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-6 py-2.5 rounded-xl transition-all shadow-sm"
+                >
+                  <Check className="h-4 w-4" />
+                  بارگذاری کامل در فرم اصلی
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   )
 }

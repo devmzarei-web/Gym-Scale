@@ -95,6 +95,7 @@ model Client {
   height           Float?
   gender           String?  @default("MALE")
   goals            String?
+  primarySport     String?  // e.g. "شنا", "فوتبال"
   notes            String?
   photoUrls        String[]
   isDeleted        Boolean  @default(false)
@@ -176,19 +177,20 @@ model Subscription {
 }
 
 model Routine {
-  id          String   @id @default(cuid())
-  trainerId   String?
-  trainer     Trainer? @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+  id           String   @id @default(cuid())
+  trainerId    String?
+  trainer      Trainer? @relation(fields: [trainerId], references: [id], onDelete: SetNull)
 
-  title       String
-  description String?
-  isTemplate  Boolean  @default(true) // True for templates, False for assigned clones
-  
+  title        String
+  description  String?
+  isTemplate   Boolean  @default(true) // True for templates, False for assigned clones
+  sportContext Json?    // Sport specific AI context (sport, target muscles, notes)
+
   workoutDays  WorkoutDay[]
   history      ClientRoutineHistory[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([trainerId, isTemplate])
 }

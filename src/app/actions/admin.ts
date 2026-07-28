@@ -21,6 +21,8 @@ export async function createTrainerAccount(formData: FormData) {
   const canCreateRoutines = formData.get("canCreateRoutines") === "on"
   const canAccessRecipes = formData.get("canAccessRecipes") === "on"
   const durationDays = formData.get("durationDays") ? parseInt(formData.get("durationDays") as string) : null
+  const aiQuota = formData.get("aiQuota") ? parseInt(formData.get("aiQuota") as string) : 3
+  const tier = (formData.get("tier") as string) === "PRO" ? "PRO" : "FREE"
 
   if (!name || !email || !password) {
     throw new Error("نام، ایمیل و کلمه عبور الزامی هستند.")
@@ -61,6 +63,8 @@ export async function createTrainerAccount(formData: FormData) {
       canCreateRoutines,
       canAccessRecipes,
       expiresAt,
+      tier,
+      aiQuota,
     },
   })
 
@@ -78,6 +82,8 @@ export async function updateTrainerAccount(trainerId: string, formData: FormData
   const canCreateDiets = formData.get("canCreateDiets") === "on"
   const canCreateRoutines = formData.get("canCreateRoutines") === "on"
   const canAccessRecipes = formData.get("canAccessRecipes") === "on"
+  const aiQuota = formData.get("aiQuota") ? parseInt(formData.get("aiQuota") as string) : undefined
+  const tier = (formData.get("tier") as string) || undefined
 
   const dataToUpdate: any = {
     name,
@@ -87,6 +93,14 @@ export async function updateTrainerAccount(trainerId: string, formData: FormData
     canCreateDiets,
     canCreateRoutines,
     canAccessRecipes,
+  }
+
+  if (aiQuota !== undefined && !isNaN(aiQuota)) {
+    dataToUpdate.aiQuota = aiQuota
+  }
+
+  if (tier && (tier === "PRO" || tier === "FREE")) {
+    dataToUpdate.tier = tier
   }
 
   if (trainerCode && trainerCode.trim().length > 0) {

@@ -40,6 +40,7 @@ export function ClientFormModal() {
         onClose={() => setIsOpen(false)}
         title="ثبت شاگرد جدید"
         titleIcon={<UserPlus className="h-5 w-5 text-emerald-600" />}
+        maxWidth="max-w-2xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <fieldset disabled={loading} className="space-y-4">
@@ -150,6 +151,43 @@ export function ClientFormModal() {
                 placeholder="مثال: افزایش حجم عضلانی و کاهش چربی بدن"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600 transition-colors"
               />
+            </div>
+
+            {/* Primary Sport Dropdown + Custom Text Input */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+              <label className="block text-xs font-bold text-slate-700">ورزش اصلی / تخصصی (Primary Sport)</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <select
+                  onChange={(e) => {
+                    const customInput = document.getElementById("customSportInput") as HTMLInputElement
+                    if (customInput && e.target.value !== "سایر") {
+                      customInput.value = e.target.value
+                    }
+                  }}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 transition-colors"
+                >
+                  <option value="">انتخاب از لیست ورزش‌ها...</option>
+                  <option value="کراس‌فیت">کراس‌فیت (CrossFit WOD)</option>
+                  <option value="شنا">شنا (Swimming)</option>
+                  <option value="فوتبال">فوتبال (Football/Soccer)</option>
+                  <option value="بسکتبال">بسکتبال (Basketball)</option>
+                  <option value="والیبال">والیبال (Volleyball)</option>
+                  <option value="دو و میدانی">دو و میدانی (Running/Track)</option>
+                  <option value="دوچرخه‌سواری">دوچرخه‌سواری (Cycling)</option>
+                  <option value="کشتی">کشتی (Wrestling)</option>
+                  <option value="هنرهای رزمی">هنرهای رزمی (MMA/Martial Arts)</option>
+                  <option value="تنیس">تنیس (Tennis)</option>
+                  <option value="بدنسازی">بدنسازی و فیتنس (Bodybuilding)</option>
+                  <option value="سایر">سایر (تایپ دستی...)</option>
+                </select>
+                <input
+                  id="customSportInput"
+                  type="text"
+                  name="primarySport"
+                  placeholder="عنوان دقیق ورزش (مثال: شنا سرعتی)"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600 transition-colors"
+                />
+              </div>
             </div>
 
             <div>

@@ -16,7 +16,16 @@ export default async function NewRoutinePage({ searchParams }: PageProps) {
 
   const clients = await prisma.client.findMany({
     where: { isDeleted: false },
-    select: { id: true, name: true },
+    select: {
+      id: true,
+      name: true,
+      age: true,
+      weight: true,
+      height: true,
+      gender: true,
+      goals: true,
+      primarySport: true,
+    },
     orderBy: { name: "asc" },
   })
 

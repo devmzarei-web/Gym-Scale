@@ -52,6 +52,7 @@ export async function createRoutine(data: {
   description?: string
   clientId?: string
   isTemplate: boolean
+  sportContext?: any
   workoutDays: WorkoutDayInput[]
 }) {
   if (!data.title || data.title.trim() === "") {
@@ -66,43 +67,83 @@ export async function createRoutine(data: {
   const allExercises = data.workoutDays.flatMap((wd) => wd.exercises)
   await ensureExercisesInDictionary(allExercises)
 
-  const routine = await prisma.routine.create({
-    data: {
-      title: data.title,
-      description: data.description,
-      isTemplate: data.isTemplate,
-      trainerId: trainer?.id || null,
-      workoutDays: {
-        create: data.workoutDays.map((wd, dayIdx) => ({
-          day: wd.day,
-          label: wd.label || `روز ${dayIdx + 1}`,
-          order: dayIdx,
-          exercises: {
-            create: wd.exercises.map((ex, exIdx) => ({
-              name: ex.name,
-              muscleGroup: ex.muscleGroup,
-              sets: ex.sets,
-              repetitions: ex.repetitions,
-              restTime: ex.restTime,
-              weight: ex.weight,
-              customDescription: ex.customDescription,
-              gifUrl: ex.gifUrl || null,
-              order: exIdx,
-              groupType: (ex.groupType || "NORMAL") as any,
-              groupId: ex.groupId || null,
-            })),
-          },
+  // Clean and sanitize sportContext for Prisma Json
+  let cleanSportContext = null
+  if (data.sportContext) {
+    try {
+      cleanSportContext = JSON.parse(JSON.stringify(data.sportContext))
+    } catch (e) {
+      cleanSportContext = null
+    }
+  }
+
+  const validGroupTypes = ["NORMAL", "SUPERSET", "TRISET", "CIRCUIT", "DROPSET", "REST_PAUSE", "TEMPO"]
+
+  const buildWorkoutDaysPayload = (days: WorkoutDayInput[]) =>
+    days.map((wd, dayIdx) => ({
+      day: wd.day,
+      label: wd.label || `روز ${dayIdx + 1}`,
+      order: dayIdx,
+      exercises: {
+        create: wd.exercises.map((ex, exIdx) => ({
+          name: ex.name ? String(ex.name) : "حرکت ورزشی",
+          muscleGroup: ex.muscleGroup ? String(ex.muscleGroup) : "سایر",
+          sets: Number(ex.sets) || 1,
+          repetitions: ex.repetitions ? String(ex.repetitions) : "10-12",
+          restTime: ex.restTime ? String(ex.restTime) : null,
+          weight: ex.weight ? String(ex.weight) : null,
+          customDescription: ex.customDescription ? String(ex.customDescription) : null,
+          gifUrl: ex.gifUrl ? String(ex.gifUrl) : null,
+          order: exIdx,
+          groupType: (ex.groupType && validGroupTypes.includes(ex.groupType) ? ex.groupType : "NORMAL") as any,
+          groupId: ex.groupId ? String(ex.groupId) : null,
         })),
       },
-      history: data.clientId
-        ? {
-            create: {
-              clientId: data.clientId,
-            },
-          }
-        : undefined,
-    },
-  })
+    }))
+
+  let routine
+  try {
+    routine = await prisma.routine.create({
+      data: {
+        title: data.title,
+        description: data.description || null,
+        isTemplate: data.isTemplate,
+        sportContext: cleanSportContext || undefined,
+        trainerId: trainer?.id || null,
+        workoutDays: {
+          create: buildWorkoutDaysPayload(data.workoutDays),
+        },
+        history: data.clientId
+          ? {
+              create: {
+                clientId: data.clientId,
+              },
+            }
+          : undefined,
+      },
+    })
+  } catch (err: any) {
+    console.warn("Routine creation retry without sportContext due to error:", err?.message)
+    // Retry without sportContext if JSON field caused error
+    routine = await prisma.routine.create({
+      data: {
+        title: data.title,
+        description: data.description || null,
+        isTemplate: data.isTemplate,
+        trainerId: trainer?.id || null,
+        workoutDays: {
+          create: buildWorkoutDaysPayload(data.workoutDays),
+        },
+        history: data.clientId
+          ? {
+              create: {
+                clientId: data.clientId,
+              },
+            }
+          : undefined,
+      },
+    })
+  }
 
   revalidatePath("/routines")
   revalidatePath("/exercises")
@@ -121,6 +162,7 @@ export async function updateRoutine(
     description?: string
     clientId?: string
     isTemplate: boolean
+    sportContext?: any
     workoutDays: WorkoutDayInput[]
   }
 ) {
@@ -134,36 +176,67 @@ export async function updateRoutine(
     where: { routineId },
   })
 
-  const routine = await prisma.routine.update({
-    where: { id: routineId },
-    data: {
-      title: data.title,
-      description: data.description,
-      isTemplate: data.isTemplate,
-      workoutDays: {
-        create: data.workoutDays.map((wd, dayIdx) => ({
-          day: wd.day,
-          label: wd.label || `روز ${dayIdx + 1}`,
-          order: dayIdx,
-          exercises: {
-            create: wd.exercises.map((ex, exIdx) => ({
-              name: ex.name,
-              muscleGroup: ex.muscleGroup,
-              sets: ex.sets,
-              repetitions: ex.repetitions,
-              restTime: ex.restTime,
-              weight: ex.weight,
-              customDescription: ex.customDescription,
-              gifUrl: ex.gifUrl || null,
-              order: exIdx,
-              groupType: (ex.groupType || "NORMAL") as any,
-              groupId: ex.groupId || null,
-            })),
-          },
+  let cleanSportContext = null
+  if (data.sportContext) {
+    try {
+      cleanSportContext = JSON.parse(JSON.stringify(data.sportContext))
+    } catch (e) {
+      cleanSportContext = null
+    }
+  }
+
+  const validGroupTypes = ["NORMAL", "SUPERSET", "TRISET", "CIRCUIT", "DROPSET", "REST_PAUSE", "TEMPO"]
+
+  const buildWorkoutDaysPayload = (days: WorkoutDayInput[]) =>
+    days.map((wd, dayIdx) => ({
+      day: wd.day,
+      label: wd.label || `روز ${dayIdx + 1}`,
+      order: dayIdx,
+      exercises: {
+        create: wd.exercises.map((ex, exIdx) => ({
+          name: ex.name ? String(ex.name) : "حرکت ورزشی",
+          muscleGroup: ex.muscleGroup ? String(ex.muscleGroup) : "سایر",
+          sets: Number(ex.sets) || 1,
+          repetitions: ex.repetitions ? String(ex.repetitions) : "10-12",
+          restTime: ex.restTime ? String(ex.restTime) : null,
+          weight: ex.weight ? String(ex.weight) : null,
+          customDescription: ex.customDescription ? String(ex.customDescription) : null,
+          gifUrl: ex.gifUrl ? String(ex.gifUrl) : null,
+          order: exIdx,
+          groupType: (ex.groupType && validGroupTypes.includes(ex.groupType) ? ex.groupType : "NORMAL") as any,
+          groupId: ex.groupId ? String(ex.groupId) : null,
         })),
       },
-    },
-  })
+    }))
+
+  let routine
+  try {
+    routine = await prisma.routine.update({
+      where: { id: routineId },
+      data: {
+        title: data.title,
+        description: data.description || null,
+        isTemplate: data.isTemplate,
+        sportContext: cleanSportContext || undefined,
+        workoutDays: {
+          create: buildWorkoutDaysPayload(data.workoutDays),
+        },
+      },
+    })
+  } catch (err: any) {
+    console.warn("Routine update retry without sportContext due to error:", err?.message)
+    routine = await prisma.routine.update({
+      where: { id: routineId },
+      data: {
+        title: data.title,
+        description: data.description || null,
+        isTemplate: data.isTemplate,
+        workoutDays: {
+          create: buildWorkoutDaysPayload(data.workoutDays),
+        },
+      },
+    })
+  }
 
   if (data.clientId) {
     await prisma.clientRoutineHistory.create({

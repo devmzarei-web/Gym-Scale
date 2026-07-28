@@ -15,6 +15,7 @@ export async function createClient(formData: FormData) {
   const height = formData.get("height") ? parseFloat(formData.get("height") as string) : null
   const gender = (formData.get("gender") as string) || "MALE"
   const goals = (formData.get("goals") as string) || null
+  const primarySport = (formData.get("primarySport") as string) || null
   const notes = (formData.get("notes") as string) || null
 
   if (!name || name.trim() === "") {
@@ -41,6 +42,7 @@ export async function createClient(formData: FormData) {
       height,
       gender,
       goals,
+      primarySport,
       notes,
       trainerId: trainer?.id || null,
     },
@@ -61,6 +63,7 @@ export async function updateClient(clientId: string, formData: FormData) {
   const height = formData.get("height") ? parseFloat(formData.get("height") as string) : null
   const gender = (formData.get("gender") as string) || null
   const goals = (formData.get("goals") as string) || null
+  const primarySport = (formData.get("primarySport") as string) || null
   const notes = (formData.get("notes") as string) || null
 
   const updateData: any = {
@@ -71,6 +74,7 @@ export async function updateClient(clientId: string, formData: FormData) {
     weight,
     height,
     goals,
+    primarySport,
     notes,
   }
 

@@ -67,6 +67,7 @@ export default async function AdminPage() {
                   <th className="p-4">کد اختصاصی مربی</th>
                   <th className="p-4">ایمیل / شناسه</th>
                   <th className="p-4">نوع حساب</th>
+                  <th className="p-4">سهمیه هوش مصنوعی</th>
                   <th className="p-4">سقف شاگردان</th>
                   <th className="p-4">دسترسی‌ها</th>
                   <th className="p-4">تاریخ انقضا (دمو)</th>
@@ -109,6 +110,17 @@ export default async function AdminPage() {
                             در انتظار تایید مدیریت
                           </span>
                         )}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border flex items-center gap-1 ${
+                          t.tier === "PRO"
+                            ? "bg-amber-50 text-amber-800 border-amber-200"
+                            : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                        }`}>
+                          ⚡ {t.aiQuota ?? 3} در روز ({t.tier || "FREE"})
+                        </span>
                       </div>
                     </td>
                     <td className="p-4 font-semibold">

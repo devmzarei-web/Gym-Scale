@@ -162,12 +162,12 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
             ? `
           <table style="width: 100%; table-layout: fixed; border-collapse: collapse; text-align: right; font-size: 11px;">
             <colgroup>
-              <col style="width: 6%;" />
-              <col style="width: 48%;" />
-              <col style="width: 8%;" />
+              <col style="width: 5%;" />
+              <col style="width: 33%;" />
+              <col style="width: 7%;" />
+              <col style="width: 11%;" />
               <col style="width: 12%;" />
-              <col style="width: 12%;" />
-              <col style="width: 14%;" />
+              <col style="width: 32%;" />
             </colgroup>
             <thead>
               <tr style="background-color: #f8fafc; border-bottom: 1px solid #cbd5e1; color: #475569;">
@@ -291,19 +291,43 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
       ${client ? `
         <div class="client-info" style="font-family: 'Vazirmatn', sans-serif; display: flex; gap: 6px; flex-wrap: wrap; text-align: right; justify-content: flex-start; padding-bottom: 8px;">
           <span class="badge" style="border-radius: 9999px; white-space: nowrap;">نام ورزشکار: ${client.name}</span>
+          ${client.primarySport ? `<span class="badge" style="background-color: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-weight: bold; border-radius: 9999px; white-space: nowrap;">ورزش تخصصی: ${toPersianDigits(client.primarySport)}</span>` : ""}
           ${client.weight ? `<span class="badge" style="border-radius: 9999px; white-space: nowrap;">وزن: ${toPersianDigits(client.weight)} کیلوگرم</span>` : ""}
           ${client.height ? `<span class="badge" style="border-radius: 9999px; white-space: nowrap;">قد: ${toPersianDigits(client.height)} سانتی‌متر</span>` : ""}
           ${client.age ? `<span class="badge" style="border-radius: 9999px; white-space: nowrap;">سن: ${toPersianDigits(client.age)} سال</span>` : ""}
         </div>
-      ` : routine.description ? `
-        <div style="display: flex; justify-content: flex-start; padding-bottom: 8px;">
-          <div style="font-family: 'Vazirmatn', sans-serif; font-size: 10px; color: #64748b; white-space: nowrap; background-color: #f1f5f9; padding: 2px 6px; border-radius: 9999px;">
-            ${toPersianDigits(routine.description)}
-          </div>
-        </div>
       ` : ""}
 
       <div class="gold-line"></div>
+
+      ${(() => {
+        const sportCtx = routine.sportContext as any || (routine.description ? { description: routine.description } : null)
+        const sportName = sportCtx?.primarySport || client?.primarySport
+
+        if (!sportCtx && !sportName) return ""
+
+        const rawCoachNotes = String(sportCtx?.coachNotes || "")
+          .replace(/^(دستورالعمل اجرایی مربی|دستورالعمل اجرایی|دستورالعمل اجرا|توصیه مربی)\s*[:：]\s*/gi, "")
+          .replace(/^(توصیه مربی|دستورالعمل اجرایی|دستورالعمل اجرا)\s*[:：]\s*/gi, "")
+          .trim()
+
+        return `
+          <div style="background-color: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; font-size: 10.5px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-weight: bold; color: #065f46; font-size: 11px;">
+                🎯 تحلیل علمی و اهداف برنامه مکمل ${sportName ? `(ورزش اصلی: ${toPersianDigits(sportName)})` : ""}
+              </span>
+              ${sportCtx?.targetMuscleGroups && Array.isArray(sportCtx.targetMuscleGroups) ? `
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                  ${sportCtx.targetMuscleGroups.map((m: string) => `<span style="background-color: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;">${toPersianDigits(m)}</span>`).join("")}
+                </div>
+              ` : ""}
+            </div>
+            ${sportCtx?.description ? `<p style="color: #334155; margin-top: 3px; line-height: 1.5; font-size: 10px;">${toPersianDigits(sportCtx.description)}</p>` : ""}
+            ${rawCoachNotes ? `<div style="background-color: #fffbeb; border-right: 3px solid #f59e0b; padding: 4px 8px; margin-top: 6px; border-radius: 4px; color: #78350f; font-weight: bold; font-size: 10px;">💡 توصیه مربی: ${toPersianDigits(rawCoachNotes)}</div>` : ""}
+          </div>
+        `
+      })()}
 
       ${workoutDaysHtml}
     </body>
