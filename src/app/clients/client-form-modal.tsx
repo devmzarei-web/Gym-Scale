@@ -167,6 +167,7 @@ export function ClientFormModal() {
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 transition-colors"
                 >
                   <option value="">انتخاب از لیست ورزش‌ها...</option>
+                  <option value="تمرین در منزل">تمرین در منزل (Home Workout)</option>
                   <option value="کراس‌فیت">کراس‌فیت (CrossFit WOD)</option>
                   <option value="شنا">شنا (Swimming)</option>
                   <option value="فوتبال">فوتبال (Football/Soccer)</option>

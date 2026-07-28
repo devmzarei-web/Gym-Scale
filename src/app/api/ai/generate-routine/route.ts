@@ -98,7 +98,14 @@ export async function POST(req: Request) {
     let specializedPersonaPrompt = ""
     let styleRulesPrompt = ""
 
-    if (trainingStyle === "CROSSFIT") {
+    if (trainingStyle === "HOME_WORKOUT") {
+      specializedPersonaPrompt = `شما سرمربی ارشد آمادگی جسمانی و طراحی تمرینات در منزل (Master Home Fitness & Resistance Band Specialist) هستید.
+شما برنامه‌های فوق‌العاده چربی‌سوز، فرم‌دهی عضلانی و تناسب اندام در منزل را با استفاده از تجهیزات خانگی (وزن بدن، کش‌های مقاوتی TPE/پیلاتس/مینی‌لوپ، دمبل خانگی، صندلی و کوله‌پشتی) طراحی می‌کنید.`
+      styleRulesPrompt = `تمرینات باید کاملاً قابل اجرا در محیط خانه (بدون نیاز به دستگاه‌های سنگین باشگاهی) و شامل:
+- حرکات وزن بدن و کش: اسکوات با کش مقاوتی، شنا سوئدی شیب‌دار روی صندلی، لانج معکوس، زیربغل با کش پیلاتس/مینی‌لوپ، دیپ روی صندلی، پل سرینی ایزومتریک (Glute Bridge)، پرس سرشانه با کش و مانتن کلمبر.
+- استفاده هوشمندانه از تکنیک‌های تحت فشار قرار دادن عضله (Time Under Tension)، تنپوی ۳ ثانیه‌ای منفی و مکث ۱ ثانیه‌ای برای جبران نبود وزنه سنگین.
+توضیحات هر حرکت شامل کنترل تنپو، مکث ایزومتریک و حفظ ایمنی مفاصل در خانه باشد.`
+    } else if (trainingStyle === "CROSSFIT") {
       specializedPersonaPrompt = `شما سرمربی ارشد بین‌المللی کراس‌فیت (CrossFit Level 3 Master Trainer & Head WOD Coach) هستید.
 شما متدولوژی رسمی CrossFit HQ، برنامه‌ریزی WODها، وزنه برداری المپیکی (Olympic Weightlifting) و MetConها را با بالاترین کیفیت طراحی می‌کنید.`
       styleRulesPrompt = `تمرینات باید شامل ترکیبی از:
@@ -142,7 +149,7 @@ export async function POST(req: Request) {
 فرمت دقیق JSON:
 {
   "routineSummary": {
-    "title": "برنامه حرفه‌ای ${trainingStyle === "CROSSFIT" ? "کراس‌فیت و WOD" : trainingStyle === "CALISTHENICS" ? "کالیستنیکس و وزن بدن" : trainingStyle === "SPORT_SPECIFIC" ? `مکمل تخصصی ${primarySport}` : "بدنسازی و هیپرتروفی"} (${targetDaysCount} روز در هفته)",
+    "title": "برنامه حرفه‌ای ${trainingStyle === "HOME_WORKOUT" ? "تمرین در منزل و چربی‌سوزی خانگی" : trainingStyle === "CROSSFIT" ? "کراس‌فیت و WOD" : trainingStyle === "CALISTHENICS" ? "کالیستنیکس و وزن بدن" : trainingStyle === "SPORT_SPECIFIC" ? `مکمل تخصصی ${primarySport}` : "بدنسازی و هیپرتروفی"} (${targetDaysCount} روز در هفته)",
     "description": "توضیح علمی درباره اهداف برنامه و متدولوژی تمرینی استفاده شده.",
     "primarySport": "${primarySport}",
     "targetMuscleGroups": ["پشت", "سرشانه", "سینه", "پا", "شکم و پهلو"],
@@ -250,7 +257,9 @@ export async function POST(req: Request) {
     const dayNameKeys = ["SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY"] as const
 
     const fallbackSummary = {
-      title: trainingStyle === "CROSSFIT"
+      title: trainingStyle === "HOME_WORKOUT"
+        ? `برنامه تخصصی تمرین در منزل و هوم‌جیم (${targetDaysCount} روز در هفته)`
+        : trainingStyle === "CROSSFIT"
         ? `برنامه تخصصی کراس‌فیت و آمادگی همه‌جانبه (${targetDaysCount} روز در هفته)`
         : trainingStyle === "CALISTHENICS"
         ? `برنامه تخصصی کالیستنیکس و وزن بدن (${targetDaysCount} روز در هفته)`
@@ -262,6 +271,23 @@ export async function POST(req: Request) {
       targetMuscleGroups: ["سینه", "پشت", "سرشانه", "پا", "شکم و پهلو"],
       coachNotes: `گرم کردن پویای مفاصل پیش از تمرین، مدیریت توان و رعایت فرم استاندارد حرکات.`,
     }
+
+    // Home Workout Fallback Templates
+    const homeWorkoutDayTemplates = [
+      {
+        label: `روز اول - فول‌بادی خانگی (وزن بدن + کش مقاوتی)`,
+        exercises: [
+          { name: "اسکوات با کش مقاوتی (Banded Squat)", muscleGroup: "پا", sets: 4, repetitions: "12-15", restTime: "60 ثانیه", weight: "", customDescription: "قرار دادن کش زیر پا و مکث ۱ ثانیه‌ای در انتهای اسکوات.", groupType: "NORMAL" },
+          { name: "شنا سوئدی پافشار روی صندلی (Incline Push-ups)", muscleGroup: "سینه", sets: 4, repetitions: "12-15", restTime: "60 ثانیه", weight: "", customDescription: "تمرکز بر انقباض سینه با ریتم آرام ۳ ثانیه‌ای.", groupType: "NORMAL" },
+          { name: "زیربغل با کش پیلاتس ایستاده (Banded Row)", muscleGroup: "پشت", sets: 4, repetitions: "15", restTime: "60 ثانیه", weight: "", customDescription: "انقباض کامل کتف‌ها در انتهای حرکت.", groupType: "NORMAL" },
+          { name: "پرس سرشانه با کش مقاوتی (Banded Overhead Press)", muscleGroup: "سرشانه", sets: 4, repetitions: "12-15", restTime: "60 ثانیه", weight: "", customDescription: "ایستادن روی مرکز کش و پرس مستقیم بالای سر.", groupType: "NORMAL" },
+          { name: "دیپ پشت بازو روی صندلی (Chair Dips)", muscleGroup: "بازو", sets: 3, repetitions: "12-15", restTime: "60 ثانیه", weight: "", customDescription: "حفظ زاویه ۹۰ درجه آرنج و انقباض پشت بازو.", groupType: "NORMAL" },
+          { name: "جلو بازو با کش مینی‌لوپ یا دمبل خانگی", muscleGroup: "بازو", sets: 3, repetitions: "15", restTime: "45 ثانیه", weight: "", customDescription: "ثبات کامل آرنج کنار بدن.", groupType: "NORMAL" },
+          { name: "پل سرینی روی زمین با مکث (Glute Bridge Hold)", muscleGroup: "پا", sets: 4, repetitions: "15 (مکث ۲ ثانیه)", restTime: "45 ثانیه", weight: "", customDescription: "فشار روی پاشنه پا و انقباض عضلات سرینی.", groupType: "NORMAL" },
+          { name: "مانتن کلمبر روی زمین (Mountain Climbers)", muscleGroup: "شکم و پهلو", sets: 4, repetitions: "30 ثانیه", restTime: "45 ثانیه", weight: "", customDescription: "حرکت تناوبی زانوها به سمت سینه در حالت پلانک.", groupType: "NORMAL" },
+        ],
+      },
+    ]
 
     // CrossFit Fallback Templates
     const crossFitDayTemplates = [
@@ -327,7 +353,9 @@ export async function POST(req: Request) {
       },
     ]
 
-    const selectedTemplates = trainingStyle === "CROSSFIT"
+    const selectedTemplates = trainingStyle === "HOME_WORKOUT"
+      ? homeWorkoutDayTemplates
+      : trainingStyle === "CROSSFIT"
       ? crossFitDayTemplates
       : trainingStyle === "CALISTHENICS"
       ? calisthenicsDayTemplates

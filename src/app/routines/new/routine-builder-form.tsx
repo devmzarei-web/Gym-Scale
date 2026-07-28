@@ -115,10 +115,10 @@ export function RoutineBuilderForm({
   // AI Generator Modal States
   const [isAiModalOpen, setIsAiModalOpen] = useState(false)
   const [aiModalClientId, setAiModalClientId] = useState(initialClientId || "")
-  const [aiPrimarySport, setAiPrimarySport] = useState("کراس‌فیت")
-  const [aiTrainingStyle, setAiTrainingStyle] = useState<"CROSSFIT" | "BODYBUILDING" | "SPORT_SPECIFIC" | "CALISTHENICS">("CROSSFIT")
+  const [aiPrimarySport, setAiPrimarySport] = useState("تمرین در منزل")
+  const [aiTrainingStyle, setAiTrainingStyle] = useState<"HOME_WORKOUT" | "CROSSFIT" | "BODYBUILDING" | "SPORT_SPECIFIC" | "CALISTHENICS">("HOME_WORKOUT")
   const [aiCustomSport, setAiCustomSport] = useState("")
-  const [aiFitnessGoal, setAiFitnessGoal] = useState("افزایش توان تنفسی، قدرت انفجاری و آمادگی همه‌جانبه (WOD / MetCon)")
+  const [aiFitnessGoal, setAiFitnessGoal] = useState("تناسب اندام، چربی‌سوزی و تقویت عضلات در خانه با وزن بدن و کش")
   const [aiDaysPerWeek, setAiDaysPerWeek] = useState(4)
   const [aiSessionDuration, setAiSessionDuration] = useState(60)
   const [aiFitnessLevel, setAiFitnessLevel] = useState("متوسط")
@@ -141,7 +141,9 @@ export function RoutineBuilderForm({
     if (selectedClient) {
       if (selectedClient.primarySport) {
         setAiPrimarySport(selectedClient.primarySport)
-        if (selectedClient.primarySport.includes("کراس") || selectedClient.primarySport.toLowerCase().includes("crossfit")) {
+        if (selectedClient.primarySport.includes("منزل") || selectedClient.primarySport.includes("خانه") || selectedClient.primarySport.toLowerCase().includes("home")) {
+          setAiTrainingStyle("HOME_WORKOUT")
+        } else if (selectedClient.primarySport.includes("کراس") || selectedClient.primarySport.toLowerCase().includes("crossfit")) {
           setAiTrainingStyle("CROSSFIT")
         }
       }
@@ -1173,6 +1175,7 @@ export function RoutineBuilderForm({
                   }}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 transition-colors"
                 >
+                  <option value="تمرین در منزل">تمرین در منزل (Home Workout)</option>
                   <option value="کراس‌فیت">کراس‌فیت (CrossFit WOD & Functional Fitness)</option>
                   <option value="شنا">شنا (Swimming)</option>
                   <option value="فوتبال">فوتبال (Soccer/Football)</option>
@@ -1192,7 +1195,23 @@ export function RoutineBuilderForm({
             {/* Training Style Selector */}
             <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
               <label className="block text-[11px] font-bold text-slate-800">سبک و نوع تمرین (Training Methodology)</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiTrainingStyle("HOME_WORKOUT")
+                    setAiFitnessGoal("تناسب اندام، چربی‌سوزی و تقویت عضلات در خانه با وزن بدن و کش")
+                  }}
+                  className={`p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between gap-1 ${
+                    aiTrainingStyle === "HOME_WORKOUT"
+                      ? "bg-rose-50 border-rose-300 text-rose-950 font-bold shadow-xs"
+                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="text-xs font-extrabold flex items-center gap-1">🏠 تمرین در منزل</span>
+                  <span className="text-[10px] text-rose-800/80 font-normal">وزن بدن، کش و هوم‌جیم</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
