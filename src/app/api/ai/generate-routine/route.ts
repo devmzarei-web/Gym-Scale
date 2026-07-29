@@ -136,20 +136,71 @@ export async function POST(req: Request) {
 توضیحات هر حرکت شامل تمرکز بر فاز منفی ۲-۳ ثانیه‌ای، انقباض ۱ ثانیه‌ای و ارتباط ذهن و عضله باشد.`
     }
 
+    // Rules for Fitness Level
+    let levelRules = ""
+    if (fitnessLevel === "مبتدی" || fitnessLevel === "BEGINNER") {
+      levelRules = `سطح ورزشکار: مبتدی (BEGINNER).
+- تعداد حرکات: دقیقاً ۶ تا ۷ حرکت در هر روز تمرینی.
+- حجم و ست‌ها: ۲ تا ۳ ست در هر حرکت.
+- پیچیدگی: حرکات پایه و امن. از روش‌های شدید تخریب عضلانی مثل dropset یا superset سنگین پرهیز شود.
+- زمان استراحت: ۴۵ تا ۶۰ ثانیه برای ریکاوری مناسب.`
+    } else if (fitnessLevel === "پیشرفته" || fitnessLevel === "ADVANCED" || fitnessLevel === "حرفه‌ای" || fitnessLevel === "PRO") {
+      levelRules = `سطح ورزشکار: پیشرفته / حرفه‌ای (ADVANCED/PRO ATHLETE).
+- قانون اجباری تعداد حرکات: در هر روز تمرینی، حتماً باید حداقل ۸ تا ۱۰ حرکت مجزا و تخصصی قرار داده شود. تولید کمتر از ۸ حرکت در هر روز برای سطح حرفه‌ای اکیداً ممنوع و غیرمجاز است!
+- ست‌ها و شدت: ۳ تا ۴ ست در هر حرکت.
+- تکنیک‌های پیشرفته: حتماً حداقل در ۳ حرکت از هر روز از سوپرست (SUPERSET)، دراپ‌ست (DROPSET)، تری‌ست (TRISET) و تنپو (TEMPO) استفاده شود.`
+    } else {
+      // INTERMEDIATE
+      levelRules = `سطح ورزشکار: متوسط (INTERMEDIATE).
+- تعداد حرکات: حتماً ۷ تا ۸ حرکت در هر روز تمرینی.
+- ست‌ها: ۳ تا ۴ ست در هر حرکت.
+- پیشرفت منطقی با حجم تمرینی متوازن و تکنیک استاندارد.`
+    }
+
+    // Rules for Session Duration & Rest Time
+    const parsedDuration = parseInt(sessionDurationMinutes) || 60
+    let durationRules = ""
+    if (parsedDuration <= 45) {
+      durationRules = `مدت زمان جلسه تمرینی: ${parsedDuration} دقیقه (جلسه فشرده و کوتاه).
+- قانون اجباری زمان استراحت (restTime): استراحت بین ست‌ها باید دقیقاً ۳۰ تا ۴۵ ثانیه باشد (حداکثر ۶۰ ثانیه فقط برای ۱ حرکت ترکیبی سنگین).
+- استفاده از استراحت ۹۰ ثانیه‌ای برای جلسات ${parsedDuration} دقیقه‌ای اکیداً ممنوع و غیرمجاز است!`
+    } else if (parsedDuration <= 60) {
+      durationRules = `مدت زمان جلسه تمرینی: ${parsedDuration} دقیقه (جلسه استاندارد).
+- قانون اجباری زمان استراحت (restTime): استراحت بین ست‌ها باید ۴۵ تا ۶۰ ثانیه باشد (حداکثر ۷۵ ثانیه برای حرکات سنگین پایه مانند اسکوات و ددلیفت).
+- از دادن استراحت‌های طولانی ناخواسته (مانند ۹۰ ثانیه برای حرکات ایزوله) خودداری کنید.`
+    } else {
+      durationRules = `مدت زمان جلسه تمرینی: ${parsedDuration} دقیقه (جلسه کامل قدرتی).
+- زمان استراحت بین ست‌ها (restTime): ۶۰ تا ۹۰ ثانیه برای حرکات سنگین قدرتی و ۴۵ تا ۶۰ ثانیه برای حرکات تکمیلی و ایزوله.`
+    }
+
+    const titlePrefix = trainingStyle === "HOME_WORKOUT"
+      ? "تمرین در منزل و چربی‌سوزی خانگی"
+      : trainingStyle === "CROSSFIT"
+      ? "کراس‌فیت و WOD"
+      : trainingStyle === "CALISTHENICS"
+      ? "کالیستنیکس و وزن بدن"
+      : trainingStyle === "SPORT_SPECIFIC"
+      ? "مکمل تخصصی " + primarySport
+      : "بدنسازی و هیپرتروفی"
+
     const systemPrompt = `${specializedPersonaPrompt}
 
 قوانین حیاتی و اجباری خروجی JSON:
 ۱. تعداد روزها (workoutDays) باید دقیقاً برابر با ${targetDaysCount} روز باشد (نه کمتر و نه بیشتر).
-۲. در هر روز تمرینی، حتماً باید حداقل ۸ حرکت تخصصی و حرفه‌ای (۸ تا ۱۰ حرکت) قرار داده شود.
-۳. ${styleRulesPrompt}
-۴. بخش توضیحات هر حرکت (customDescription) باید فوق‌العاده مختصر، خلاصه و کاربردی (حداکثر ۸ تا ۱۲ کلمه) باشد تا در جداول PDF کاملاً تمیز و یک‌خطی قرار گیرد (مثلاً: "انفجار کامل لگن در بالای حرکت و ریتم مداوم").
-۵. بخش coachNotes صرفاً متن خلاصه دستورالعمل مربی بدون هیچگونه پیشوند مانند "توصیه مربی" یا "دستورالعمل اجرایی" باشد (مثلاً: "گرم کردن پویای مفاصل پیش از تمرین، رعایت فرم صحیح و مدیریت توان").
-۶. پاسخ باید صرفاً یک ساختار JSON معتبر به زبان فارسی باشد.
+۲. ${levelRules}
+۳. ${durationRules}
+۴. ${styleRulesPrompt}
+۵. بخش توضیحات هر حرکت (customDescription) باید فوق‌العاده مختصر، خلاصه و کاربردی (حداکثر ۸ تا ۱۲ کلمه) باشد تا در جداول PDF کاملاً تمیز و یک‌خطی قرار گیرد (مثلاً: "انفجار کامل لگن در بالای حرکت و ریتم مداوم").
+۶. بخش coachNotes صرفاً متن خلاصه دستورالعمل مربی بدون هیچگونه پیشوند مانند "توصیه مربی" یا "دستورالعمل اجرایی" باشد (مثلاً: "گرم کردن پویای مفاصل پیش از تمرین، رعایت فرم صحیح و مدیریت توان").
+۷. دستورالعمل اجباری سوپرست (SUPERSET) و تری‌ست (TRISET):
+- اگر groupType برابر با "SUPERSET" است، حتماً فیلدهای "pairedMuscleGroup" (گروه عضلانی حرکت دوم) و "pairedExerciseName" (عنوان حرکت دوم) مقداردهی شوند.
+- اگر groupType برابر با "TRISET" است، علاوه بر pairedMuscleGroup و pairedExerciseName، فیلدهای "triMuscleGroup2" و "triExerciseName2" نیز مقداردهی شوند.
+۸. پاسخ باید صرفاً یک ساختار JSON معتبر به زبان فارسی باشد.
 
 فرمت دقیق JSON:
 {
   "routineSummary": {
-    "title": "برنامه حرفه‌ای ${trainingStyle === "HOME_WORKOUT" ? "تمرین در منزل و چربی‌سوزی خانگی" : trainingStyle === "CROSSFIT" ? "کراس‌فیت و WOD" : trainingStyle === "CALISTHENICS" ? "کالیستنیکس و وزن بدن" : trainingStyle === "SPORT_SPECIFIC" ? `مکمل تخصصی ${primarySport}` : "بدنسازی و هیپرتروفی"} (${targetDaysCount} روز در هفته)",
+    "title": "برنامه حرفه‌ای ${titlePrefix} (${targetDaysCount} روز در هفته)",
     "description": "توضیح علمی درباره اهداف برنامه و متدولوژی تمرینی استفاده شده.",
     "primarySport": "${primarySport}",
     "targetMuscleGroups": ["پشت", "سرشانه", "سینه", "پا", "شکم و پهلو"],
@@ -161,13 +212,25 @@ export async function POST(req: Request) {
       "label": "روز اول - تمرینات تخصصی",
       "exercises": [
         {
-          "name": "عنوان حرکت استاندارد",
+          "name": "پرس سینه دمبل روی نیمکت",
           "muscleGroup": "سینه",
           "sets": 4,
           "repetitions": "10-12",
-          "restTime": "90 ثانیه",
+          "restTime": "45 ثانیه",
           "weight": "",
-          "customDescription": "توضیح کوتاه ۸ کلمه‌ای درباره اجرا.",
+          "customDescription": "تمرکز بر انقباض سینه و کنترل فاز منفی.",
+          "groupType": "SUPERSET",
+          "pairedMuscleGroup": "پشت",
+          "pairedExerciseName": "زیربغل دمبل تک دست"
+        },
+        {
+          "name": "اسکوات هالتر پشت",
+          "muscleGroup": "پا",
+          "sets": 4,
+          "repetitions": "8-10",
+          "restTime": "60 ثانیه",
+          "weight": "",
+          "customDescription": "پایین رفتن عمیق و انقباض چهارسر.",
           "groupType": "NORMAL"
         }
       ]
@@ -188,8 +251,8 @@ export async function POST(req: Request) {
 - سبک تمرین: ${trainingStyle}
 - هدف این برنامه: ${fitnessGoal}
 - تعداد روزهای برنامه: دقیقاً ${targetDaysCount} روز
-- مدت جلسه: ${sessionDurationMinutes} دقیقه
-- سطح آمادگی: ${fitnessLevel}
+- مدت جلسه: ${parsedDuration} دقیقه (زمان استراحت‌ها کاملاً منطبق بر این مدت تنظیم شود)
+- سطح آمادگی: ${fitnessLevel} (حتماً حداقل ۸ تا ۱۰ حرکت در هر روز تولید شود)
 - توضیحات مربی: ${notes || "بدون ملاحظات خاص"}`
 
     if (apiKey) {
@@ -253,8 +316,10 @@ export async function POST(req: Request) {
       }
     }
 
-    // High-Quality Specialized Fallback Generators per Style
+    // High-Quality Specialized Fallback Generators per Style & Rest Time rules
     const dayNameKeys = ["SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY"] as const
+    const defaultRestTime = parsedDuration <= 45 ? "45 ثانیه" : parsedDuration <= 60 ? "60 ثانیه" : "75 ثانیه"
+    const defaultSets = fitnessLevel === "مبتدی" || fitnessLevel === "BEGINNER" ? 3 : 4
 
     const fallbackSummary = {
       title: trainingStyle === "HOME_WORKOUT"
@@ -277,8 +342,8 @@ export async function POST(req: Request) {
       {
         label: `روز اول - فول‌بادی خانگی (وزن بدن + کش مقاوتی)`,
         exercises: [
-          { name: "اسکوات با کش مقاوتی (Banded Squat)", muscleGroup: "پا", sets: 4, repetitions: "12-15", restTime: "60 ثانیه", weight: "", customDescription: "قرار دادن کش زیر پا و مکث ۱ ثانیه‌ای در انتهای اسکوات.", groupType: "NORMAL" },
-          { name: "شنا سوئدی پافشار روی صندلی (Incline Push-ups)", muscleGroup: "سینه", sets: 4, repetitions: "12-15", restTime: "60 ثانیه", weight: "", customDescription: "تمرکز بر انقباض سینه با ریتم آرام ۳ ثانیه‌ای.", groupType: "NORMAL" },
+          { name: "اسکوات با کش مقاوتی (Banded Squat)", muscleGroup: "پا", sets: defaultSets, repetitions: "12-15", restTime: defaultRestTime, weight: "", customDescription: "قرار دادن کش زیر پا و مکث ۱ ثانیه‌ای در انتهای اسکوات.", groupType: "NORMAL" },
+          { name: "شنا سوئدی پافشار روی صندلی (Incline Push-ups)", muscleGroup: "سینه", sets: defaultSets, repetitions: "12-15", restTime: defaultRestTime, weight: "", customDescription: "تمرکز بر انقباض سینه با ریتم آرام ۳ ثانیه‌ای.", groupType: "NORMAL" },
           { name: "زیربغل با کش پیلاتس ایستاده (Banded Row)", muscleGroup: "پشت", sets: 4, repetitions: "15", restTime: "60 ثانیه", weight: "", customDescription: "انقباض کامل کتف‌ها در انتهای حرکت.", groupType: "NORMAL" },
           { name: "پرس سرشانه با کش مقاوتی (Banded Overhead Press)", muscleGroup: "سرشانه", sets: 4, repetitions: "12-15", restTime: "60 ثانیه", weight: "", customDescription: "ایستادن روی مرکز کش و پرس مستقیم بالای سر.", groupType: "NORMAL" },
           { name: "دیپ پشت بازو روی صندلی (Chair Dips)", muscleGroup: "بازو", sets: 3, repetitions: "12-15", restTime: "60 ثانیه", weight: "", customDescription: "حفظ زاویه ۹۰ درجه آرنج و انقباض پشت بازو.", groupType: "NORMAL" },

@@ -24,6 +24,8 @@ export default async function NewRoutinePage({ searchParams }: PageProps) {
       height: true,
       gender: true,
       goals: true,
+      fitnessLevel: true,
+      isMuscular: true,
       primarySport: true,
     },
     orderBy: { name: "asc" },

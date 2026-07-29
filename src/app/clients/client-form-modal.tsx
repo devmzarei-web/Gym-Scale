@@ -143,14 +143,43 @@ export function ClientFormModal() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">اهداف ورزشی</label>
-              <input
-                type="text"
-                name="goals"
-                placeholder="مثال: افزایش حجم عضلانی و کاهش چربی بدن"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600 transition-colors"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">اهداف ورزشی</label>
+                <input
+                  type="text"
+                  name="goals"
+                  placeholder="مثال: افزایش حجم عضلانی و کاهش چربی بدن"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-emerald-600 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">سطح آمادگی ورزشی (Fitness Level)</label>
+                <select
+                  name="fitnessLevel"
+                  defaultValue="INTERMEDIATE"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 transition-colors font-semibold"
+                >
+                  <option value="BEGINNER">مبتدی (Beginner)</option>
+                  <option value="INTERMEDIATE">متوسط (Intermediate)</option>
+                  <option value="ADVANCED">پیشرفته / ورزشکار حرفه‌ای (Advanced / Pro)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Muscular Athlete Checkbox option */}
+            <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl flex items-center justify-between gap-3">
+              <div>
+                <span className="block text-xs font-bold text-amber-900">ورزشکار عضلانی / تناسب اندام (Muscular Athlete)</span>
+                <span className="block text-[11px] text-amber-700 font-medium mt-0.5">
+                  دارای توده عضلانی بالا و چربی پایین (شاخص BMI این فرد به عنوان «عضلانی/ورزشکاری» ثبت می‌شود نه اضافه وزن).
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input type="checkbox" name="isMuscular" className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+              </label>
             </div>
 
             {/* Primary Sport Dropdown + Custom Text Input */}

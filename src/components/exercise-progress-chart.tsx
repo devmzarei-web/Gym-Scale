@@ -29,6 +29,9 @@ interface ClientProfile {
   weight?: number
   gender?: string
   goals?: string
+  primarySport?: string
+  fitnessLevel?: string
+  isMuscular?: boolean
 }
 
 interface ExerciseProgressChartProps {
@@ -103,9 +106,19 @@ export default function ExerciseProgressChart({ logs, clientProfile }: ExerciseP
   // 1. BMI Calculation
   const bmi = Math.round((currentWeight / (heightM * heightM)) * 10) / 10
 
+  // 5. Waist-to-Height Ratio (WtHR) & V-Taper Index from Submitted Measurements
+  const waistCm = latestLog.waist
+  const chestCm = latestLog.chest
+  const wthr = waistCm ? Math.round((waistCm / heightCm) * 100) / 100 : null
+
+  // Athletic / High Muscle Mass detection for BMI
+  const isAthleticBuild = clientProfile?.isMuscular === true && bmi >= 25
+
   let bmiStatus = { text: "نرمال و ایده‌آل", color: "bg-emerald-50 text-emerald-700 border-emerald-200" }
   if (bmi < 18.5) {
     bmiStatus = { text: "کمبود وزن", color: "bg-blue-50 text-blue-700 border-blue-200" }
+  } else if (bmi >= 25 && isAthleticBuild) {
+    bmiStatus = { text: "عضلانی / ورزشکاری 🏋️‍♂️", color: "bg-emerald-50 text-emerald-800 border-emerald-200" }
   } else if (bmi >= 25 && bmi < 30) {
     bmiStatus = { text: "اضافه وزن خفیف", color: "bg-amber-50 text-amber-700 border-amber-200" }
   } else if (bmi >= 30) {
@@ -133,11 +146,6 @@ export default function ExerciseProgressChart({ logs, clientProfile }: ExerciseP
   const estimatedBodyFatPct = Math.max(5, Math.min(45, Math.round(rawBfPct)))
   const fatMassKg = Math.round(((currentWeight * estimatedBodyFatPct) / 100) * 10) / 10
   const leanMassKg = Math.round((currentWeight - fatMassKg) * 10) / 10
-
-  // 5. Waist-to-Height Ratio (WtHR) & V-Taper Index from Submitted Measurements
-  const waistCm = latestLog.waist
-  const chestCm = latestLog.chest
-  const wthr = waistCm ? Math.round((waistCm / heightCm) * 100) / 100 : null
 
   let wthrStatus = { text: "سالم و متناسب", color: "text-emerald-600" }
   if (wthr && wthr >= 0.5) {
@@ -262,6 +270,12 @@ export default function ExerciseProgressChart({ logs, clientProfile }: ExerciseP
               {toFa(minIdealW)} تا {toFa(maxIdealW)} کیلوگرم
             </span>
           </div>
+
+          {isAthleticBuild && (
+            <p className="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl leading-relaxed font-semibold">
+              💡 <b>نکته بیومکانیک ورزشکاران:</b> شاخص BMI به طور سنتی فقط وزن کل را محاسبه می‌کند. برای ورزشکاران با توده عضلانی بالا و درصد چربی پایین، بالا بودن BMI ناشی از چگالی عضله است و به معنای چاقی نیست.
+            </p>
+          )}
         </div>
 
         {/* Card 2: BMR & Daily TDEE Metabolism Engine */}

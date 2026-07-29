@@ -108,7 +108,11 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
     const heightInMeters = client.height / 100
     const calculatedBmi = client.weight / (heightInMeters * heightInMeters)
     bmi = calculatedBmi.toFixed(1)
+
+    const isAthletic = client.isMuscular === true
+
     if (calculatedBmi < 18.5) bmiCategory = "کمبود وزن"
+    else if (calculatedBmi >= 25 && isAthletic) bmiCategory = "عضلانی / ورزشکاری 🏋️‍♂️"
     else if (calculatedBmi < 25) bmiCategory = "وزن ایده‌آل"
     else if (calculatedBmi < 30) bmiCategory = "اضافه وزن"
     else bmiCategory = "چاقی"

@@ -97,10 +97,19 @@ export default async function ClientDashboardPage() {
   const assignedDiets = Array.from(new Map(rawDiets.map((d: any) => [d.id, d])).values())
   const latestWeight = client.progressLogs?.[0]?.weight || client.weight
   const heightInMeters = client.height ? client.height / 100 : null
-  const bmi =
-    latestWeight && heightInMeters
-      ? (latestWeight / (heightInMeters * heightInMeters)).toFixed(1)
-      : null
+  const numBmi = latestWeight && heightInMeters ? (latestWeight / (heightInMeters * heightInMeters)) : null
+  const bmi = numBmi ? numBmi.toFixed(1) : null
+
+  let bmiLabel = ""
+  if (numBmi) {
+    const isAthletic = client.isMuscular === true
+
+    if (numBmi < 18.5) bmiLabel = " (کمبود وزن)"
+    else if (numBmi >= 25 && isAthletic) bmiLabel = " (عضلانی / ورزشکاری)"
+    else if (numBmi < 25) bmiLabel = " (وزن ایده‌آل)"
+    else if (numBmi < 30) bmiLabel = " (اضافه وزن)"
+    else bmiLabel = " (چاقی)"
+  }
 
   return (
     <div className="space-y-8">
@@ -217,7 +226,7 @@ export default async function ClientDashboardPage() {
 
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <span className="block text-[11px] font-semibold text-slate-400 mb-1">شاخص BMI</span>
-              <span className="text-lg font-extrabold text-emerald-700">{bmi || "-"}</span>
+              <span className="text-base font-extrabold text-emerald-700">{bmi ? `${bmi}${bmiLabel}` : "-"}</span>
             </div>
 
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">

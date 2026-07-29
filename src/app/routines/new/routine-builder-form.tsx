@@ -66,11 +66,13 @@ interface ExerciseItem {
   gifUrl?: string | null
   groupType: GroupTypeKey
   groupId?: string | null
-  // Paired dropdown exercise fields for SUPERSET & TRISET
+  // Paired exercise fields for SUPERSET & TRISET
   pairedMuscleGroup?: string
   pairedExerciseName?: string
+  isPairedCustom?: boolean
   triMuscleGroup2?: string
   triExerciseName2?: string
+  isTriCustom2?: boolean
 }
 
 interface DayItem {
@@ -150,6 +152,15 @@ export function RoutineBuilderForm({
       if (selectedClient.goals) {
         setAiFitnessGoal(`مکمل ${selectedClient.goals}`)
       }
+      if ((selectedClient as any).fitnessLevel) {
+        const levelMap: Record<string, string> = {
+          BEGINNER: "مبتدی",
+          INTERMEDIATE: "متوسط",
+          ADVANCED: "پیشرفته",
+        }
+        const rawLevel = (selectedClient as any).fitnessLevel
+        setAiFitnessLevel(levelMap[rawLevel] || rawLevel)
+      }
     }
   }
 
@@ -225,6 +236,12 @@ export function RoutineBuilderForm({
         label: d.label || `روز ${dIdx + 1}`,
         exercises: (d.exercises || []).map((ex: any, exIdx: number) => {
           const dictMatch = exerciseDictionary.find((dict) => dict.name === ex.name)
+          const pairedMatch = ex.pairedExerciseName
+            ? exerciseDictionary.some((dict) => dict.name === ex.pairedExerciseName)
+            : true
+          const triMatch2 = ex.triExerciseName2
+            ? exerciseDictionary.some((dict) => dict.name === ex.triExerciseName2)
+            : true
 
           return {
             id: `ex-ai-${Date.now()}-${dIdx}-${exIdx}`,
@@ -239,6 +256,12 @@ export function RoutineBuilderForm({
             gifUrl: dictMatch?.gifUrl || "",
             groupType: (ex.groupType as GroupTypeKey) || "NORMAL",
             groupId: null,
+            pairedMuscleGroup: ex.pairedMuscleGroup || "",
+            pairedExerciseName: ex.pairedExerciseName || "",
+            isPairedCustom: !pairedMatch,
+            triMuscleGroup2: ex.triMuscleGroup2 || "",
+            triExerciseName2: ex.triExerciseName2 || "",
+            isTriCustom2: !triMatch2,
           }
         }),
       }
@@ -896,16 +919,16 @@ export function RoutineBuilderForm({
                           </button>
                         </div>
 
-                        {/* DYNAMIC EXTRA FIELDS FOR SUPERSET & TRISET (DROPDOWN BASED) */}
+                        {/* DYNAMIC EXTRA FIELDS FOR SUPERSET & TRISET (DROPDOWN OR CUSTOM TEXT INPUT) */}
                         {ex.groupType === "SUPERSET" && (
                           <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2 text-xs">
                             <span className="font-bold text-amber-900 flex items-center gap-1.5">
                               <Sparkles className="h-3.5 w-3.5 text-amber-600" />
-                              انتخاب حرکت دوم سوپرست (اجرا بلافاصله بدون استراحت):
+                              انتخاب یا تایپ حرکت دوم سوپرست (اجرا بلافاصله بدون استراحت):
                             </span>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div>
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                              <div className="sm:col-span-4">
                                 <label className="block text-[10px] font-bold text-amber-800 mb-1">
                                   گروه عضله حرکت دوم
                                 </label>
@@ -924,26 +947,56 @@ export function RoutineBuilderForm({
                                 </select>
                               </div>
 
-                              <div>
-                                <label className="block text-[10px] font-bold text-amber-800 mb-1">
-                                  انتخاب حرکت دوم از بانک حرکات
-                                </label>
-                                <select
-                                  value={ex.pairedExerciseName || ""}
-                                  onChange={(e) =>
-                                    handleUpdateExercise(dayItem.id, ex.id, "pairedExerciseName", e.target.value)
+                              <div className="sm:col-span-8 flex items-center gap-2">
+                                <div className="flex-1">
+                                  <label className="block text-[10px] font-bold text-amber-800 mb-1">
+                                    حرکت دوم سوپرست
+                                  </label>
+                                  {!ex.isPairedCustom ? (
+                                    <select
+                                      value={ex.pairedExerciseName || ""}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayItem.id, ex.id, "pairedExerciseName", e.target.value)
+                                      }
+                                      className="w-full bg-white border border-amber-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900"
+                                    >
+                                      <option value="">-- انتخاب حرکت دوم سوپرست --</option>
+                                      {exerciseDictionary
+                                        .filter((d) => d.muscleGroup === (ex.pairedMuscleGroup || ex.muscleGroup))
+                                        .map((dictItem) => (
+                                          <option key={dictItem.id} value={dictItem.name}>
+                                            {dictItem.name}
+                                          </option>
+                                        ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      value={ex.pairedExerciseName || ""}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayItem.id, ex.id, "pairedExerciseName", e.target.value)
+                                      }
+                                      placeholder="نام حرکت دوم سوپرست..."
+                                      className="w-full bg-white border border-amber-400 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 focus:outline-hidden focus:border-amber-600 placeholder-slate-400"
+                                    />
+                                  )}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleUpdateExercise(dayItem.id, ex.id, "isPairedCustom", !ex.isPairedCustom)
                                   }
-                                  className="w-full bg-white border border-amber-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900"
+                                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 whitespace-nowrap ${
+                                    ex.isPairedCustom
+                                      ? "bg-amber-100 text-amber-800 border-amber-300"
+                                      : "bg-white text-slate-600 border-amber-200 hover:bg-amber-50"
+                                  }`}
+                                  title="سوئیچ بین انتخاب از بانک داده یا تایپ حرکت دوم جدید"
                                 >
-                                  <option value="">-- انتخاب حرکت دوم سوپرست --</option>
-                                  {exerciseDictionary
-                                    .filter((d) => d.muscleGroup === (ex.pairedMuscleGroup || ex.muscleGroup))
-                                    .map((dictItem) => (
-                                      <option key={dictItem.id} value={dictItem.name}>
-                                        {dictItem.name}
-                                      </option>
-                                    ))}
-                                </select>
+                                  <Edit3 className="h-3 w-3" />
+                                  {ex.isPairedCustom ? "بانک" : "+ جدید"}
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -957,8 +1010,8 @@ export function RoutineBuilderForm({
                             </span>
 
                             {/* Exercise 2 */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div>
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                              <div className="sm:col-span-4">
                                 <label className="block text-[10px] font-bold text-purple-800 mb-1">
                                   گروه عضله حرکت دوم
                                 </label>
@@ -977,32 +1030,62 @@ export function RoutineBuilderForm({
                                 </select>
                               </div>
 
-                              <div>
-                                <label className="block text-[10px] font-bold text-purple-800 mb-1">
-                                  انتخاب حرکت دوم تری‌ست
-                                </label>
-                                <select
-                                  value={ex.pairedExerciseName || ""}
-                                  onChange={(e) =>
-                                    handleUpdateExercise(dayItem.id, ex.id, "pairedExerciseName", e.target.value)
+                              <div className="sm:col-span-8 flex items-center gap-2">
+                                <div className="flex-1">
+                                  <label className="block text-[10px] font-bold text-purple-800 mb-1">
+                                    حرکت دوم تری‌ست
+                                  </label>
+                                  {!ex.isPairedCustom ? (
+                                    <select
+                                      value={ex.pairedExerciseName || ""}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayItem.id, ex.id, "pairedExerciseName", e.target.value)
+                                      }
+                                      className="w-full bg-white border border-purple-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900"
+                                    >
+                                      <option value="">-- انتخاب حرکت دوم --</option>
+                                      {exerciseDictionary
+                                        .filter((d) => d.muscleGroup === (ex.pairedMuscleGroup || ex.muscleGroup))
+                                        .map((dictItem) => (
+                                          <option key={dictItem.id} value={dictItem.name}>
+                                            {dictItem.name}
+                                          </option>
+                                        ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      value={ex.pairedExerciseName || ""}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayItem.id, ex.id, "pairedExerciseName", e.target.value)
+                                      }
+                                      placeholder="نام حرکت دوم..."
+                                      className="w-full bg-white border border-purple-400 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 focus:outline-hidden focus:border-purple-600 placeholder-slate-400"
+                                    />
+                                  )}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleUpdateExercise(dayItem.id, ex.id, "isPairedCustom", !ex.isPairedCustom)
                                   }
-                                  className="w-full bg-white border border-purple-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900"
+                                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 whitespace-nowrap ${
+                                    ex.isPairedCustom
+                                      ? "bg-purple-100 text-purple-800 border-purple-300"
+                                      : "bg-white text-slate-600 border-purple-200 hover:bg-purple-50"
+                                  }`}
+                                  title="سوئیچ بین بانک داده یا تایپ حرکت دوم"
                                 >
-                                  <option value="">-- انتخاب حرکت دوم --</option>
-                                  {exerciseDictionary
-                                    .filter((d) => d.muscleGroup === (ex.pairedMuscleGroup || ex.muscleGroup))
-                                    .map((dictItem) => (
-                                      <option key={dictItem.id} value={dictItem.name}>
-                                        {dictItem.name}
-                                      </option>
-                                    ))}
-                                </select>
+                                  <Edit3 className="h-3 w-3" />
+                                  {ex.isPairedCustom ? "بانک" : "+ جدید"}
+                                </button>
                               </div>
                             </div>
 
                             {/* Exercise 3 */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-purple-200/60">
-                              <div>
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end pt-2 border-t border-purple-200/60">
+                              <div className="sm:col-span-4">
                                 <label className="block text-[10px] font-bold text-purple-800 mb-1">
                                   گروه عضله حرکت سوم
                                 </label>
@@ -1021,26 +1104,56 @@ export function RoutineBuilderForm({
                                 </select>
                               </div>
 
-                              <div>
-                                <label className="block text-[10px] font-bold text-purple-800 mb-1">
-                                  انتخاب حرکت سوم تری‌ست
-                                </label>
-                                <select
-                                  value={ex.triExerciseName2 || ""}
-                                  onChange={(e) =>
-                                    handleUpdateExercise(dayItem.id, ex.id, "triExerciseName2", e.target.value)
+                              <div className="sm:col-span-8 flex items-center gap-2">
+                                <div className="flex-1">
+                                  <label className="block text-[10px] font-bold text-purple-800 mb-1">
+                                    حرکت سوم تری‌ست
+                                  </label>
+                                  {!ex.isTriCustom2 ? (
+                                    <select
+                                      value={ex.triExerciseName2 || ""}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayItem.id, ex.id, "triExerciseName2", e.target.value)
+                                      }
+                                      className="w-full bg-white border border-purple-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900"
+                                    >
+                                      <option value="">-- انتخاب حرکت سوم --</option>
+                                      {exerciseDictionary
+                                        .filter((d) => d.muscleGroup === (ex.triMuscleGroup2 || ex.muscleGroup))
+                                        .map((dictItem) => (
+                                          <option key={dictItem.id} value={dictItem.name}>
+                                            {dictItem.name}
+                                          </option>
+                                        ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      value={ex.triExerciseName2 || ""}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayItem.id, ex.id, "triExerciseName2", e.target.value)
+                                      }
+                                      placeholder="نام حرکت سوم..."
+                                      className="w-full bg-white border border-purple-400 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 focus:outline-hidden focus:border-purple-600 placeholder-slate-400"
+                                    />
+                                  )}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleUpdateExercise(dayItem.id, ex.id, "isTriCustom2", !ex.isTriCustom2)
                                   }
-                                  className="w-full bg-white border border-purple-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900"
+                                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 whitespace-nowrap ${
+                                    ex.isTriCustom2
+                                      ? "bg-purple-100 text-purple-800 border-purple-300"
+                                      : "bg-white text-slate-600 border-purple-200 hover:bg-purple-50"
+                                  }`}
+                                  title="سوئیچ بین بانک داده یا تایپ حرکت سوم"
                                 >
-                                  <option value="">-- انتخاب حرکت سوم --</option>
-                                  {exerciseDictionary
-                                    .filter((d) => d.muscleGroup === (ex.triMuscleGroup2 || ex.muscleGroup))
-                                    .map((dictItem) => (
-                                      <option key={dictItem.id} value={dictItem.name}>
-                                        {dictItem.name}
-                                      </option>
-                                    ))}
-                                </select>
+                                  <Edit3 className="h-3 w-3" />
+                                  {ex.isTriCustom2 ? "بانک" : "+ جدید"}
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -1298,7 +1411,14 @@ export function RoutineBuilderForm({
               return (
                 <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs space-y-1.5">
                   <div className="flex items-center justify-between font-bold text-emerald-900">
-                    <span>اطلاعات شاگرد: {selectedClient.name}</span>
+                    <span className="flex items-center gap-1.5">
+                      اطلاعات شاگرد: {selectedClient.name}
+                      {(selectedClient as any).isMuscular && (
+                        <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                          🏋️‍♂️ عضلانی / ورزشکار
+                        </span>
+                      )}
+                    </span>
                     {selectedClient.primarySport && (
                       <span className="bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-md text-[10px]">
                         ورزش تخصصی: {selectedClient.primarySport}

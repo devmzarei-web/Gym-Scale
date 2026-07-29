@@ -95,6 +95,8 @@ model Client {
   height           Float?
   gender           String?  @default("MALE")
   goals            String?
+  fitnessLevel     String?  @default("INTERMEDIATE")
+  isMuscular       Boolean  @default(false)
   primarySport     String?  // e.g. "شنا", "فوتبال"
   notes            String?
   photoUrls        String[]
