@@ -173,6 +173,18 @@ echo -e "${GREEN}.env file successfully generated!${NC}"
 
 echo -e "\n${YELLOW}Step 5: Installing Project Dependencies & Building${NC}"
 echo "------------------------------------------------------"
+# Auto-create Swap if VPS has less than 1GB free to prevent build freezes
+FREE_MEM=$(free -m | awk '/^Mem:/{print $7}')
+TOTAL_SWAP=$(free -m | awk '/^Swap:/{print $2}')
+if [ "$TOTAL_SWAP" -eq 0 ] && [ "$FREE_MEM" -lt 1500 ]; then
+  echo -e "\n${YELLOW}Low memory detected (${FREE_MEM}MB free, 0MB swap). Creating 2GB swapfile to prevent build freeze...${NC}"
+  fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo -e "${GREEN}2GB Swap activated successfully!${NC}"
+fi
+
 mkdir -p "$APP_DIR/logs"
 chown -R $REAL_USER:$REAL_USER "$APP_DIR"
 
@@ -180,7 +192,10 @@ sudo -u $REAL_USER npm install
 sudo -u $REAL_USER npx prisma generate
 sudo -u $REAL_USER npx prisma db push
 sudo -u $REAL_USER npm run seed
-sudo -u $REAL_USER npm run build
+
+# Build with memory constraint
+echo "Building Next.js application with memory optimization..."
+sudo -u $REAL_USER NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 echo -e "\n${YELLOW}Step 6: Setting up PM2 Service${NC}"
 echo "------------------------------------------------------"
@@ -260,13 +275,6 @@ EOF
 ln -sf /etc/nginx/sites-available/gym-scale /etc/nginx/sites-enabled/
 nginx -t
 systemctl reload nginx
-
-# Firewall setup
-if command -v ufw &> /dev/null; then
-  ufw allow OpenSSH || true
-  ufw allow 'Nginx Full' || true
-  ufw --force enable || true
-fi
 
 echo -e "\n${GREEN}======================================================${NC}"
 echo -e "${GREEN}      🎉 Gym-Scale Successfully Installed & Started!   ${NC}"
