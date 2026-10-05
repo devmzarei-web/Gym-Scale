@@ -351,7 +351,7 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
     console.warn("Puppeteer pool fallback activated for routine PDF:", poolErr)
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
     })
     try {
       const page = await browser.newPage()
@@ -482,7 +482,7 @@ export async function generateDietPdfBuffer(diet: any, client?: any, trainer?: a
     console.warn("Puppeteer pool fallback activated for diet PDF:", poolErr)
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
     })
     try {
       const page = await browser.newPage()
