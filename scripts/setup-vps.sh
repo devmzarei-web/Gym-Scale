@@ -40,8 +40,8 @@ while [ -z "$DOMAIN_OR_IP" ]; do
 done
 
 # 2. Application Port
-read -p "Enter internal port for Gym-Scale [default: 3005]: " APP_PORT
-APP_PORT=${APP_PORT:-3005}
+read -p "Enter internal port for Gym-Scale [default: 3020]: " APP_PORT
+APP_PORT=${APP_PORT:-3020}
 
 # 3. Database Password
 DEFAULT_DB_PASS=$(openssl rand -hex 12)
