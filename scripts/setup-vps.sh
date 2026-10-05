@@ -111,6 +111,9 @@ if ! command -v nginx &> /dev/null; then
   systemctl start nginx
 fi
 
+# Non-interactive apt
+export DEBIAN_FRONTEND=noninteractive
+
 echo -e "\n${YELLOW}Step 3: Configuring PostgreSQL Database${NC}"
 echo "------------------------------------------------------"
 # Create user and database if they don't exist
@@ -124,9 +127,11 @@ BEGIN
 END
 \$\$;"
 
-sudo -u postgres psql -c "SELECT 'CREATE DATABASE nutritrain_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'nutritrain_db')\gexec"
+# Check if database exists, create if not
+if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'nutritrain_db'" | grep -q 1; then
+  sudo -u postgres psql -c "CREATE DATABASE nutritrain_db OWNER gymscale_user;"
+fi
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE nutritrain_db TO gymscale_user;"
-sudo -u postgres psql -c "ALTER DATABASE nutritrain_db OWNER TO gymscale_user;"
 echo -e "${GREEN}PostgreSQL database 'nutritrain_db' and user 'gymscale_user' configured successfully!${NC}"
 
 echo -e "\n${YELLOW}Step 4: Generating .env Configuration${NC}"
