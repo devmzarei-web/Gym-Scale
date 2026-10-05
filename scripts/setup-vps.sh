@@ -39,34 +39,44 @@ while [ -z "$DOMAIN_OR_IP" ]; do
   read -p "Domain or IP is required: " DOMAIN_OR_IP
 done
 
-# 2. Database Password
+# 2. Application Port
+read -p "Enter internal port for Gym-Scale [default: 3005]: " APP_PORT
+APP_PORT=${APP_PORT:-3005}
+
+# 3. Database Password
 DEFAULT_DB_PASS=$(openssl rand -hex 12)
 read -p "Enter PostgreSQL password for 'gymscale_user' [Press Enter to auto-generate]: " DB_PASS
 DB_PASS=${DB_PASS:-$DEFAULT_DB_PASS}
 
-# 3. SuperAdmin Username
+# 4. SuperAdmin Username
 read -p "Enter SuperAdmin Username [default: admin]: " ADMIN_USER
 ADMIN_USER=${ADMIN_USER:-admin}
 
-# 4. SuperAdmin Password
+# 5. SuperAdmin Password
 DEFAULT_ADMIN_PASS="Admin@$(openssl rand -hex 4)"
 read -p "Enter SuperAdmin Password [default: $DEFAULT_ADMIN_PASS]: " ADMIN_PASS
 ADMIN_PASS=${ADMIN_PASS:-$DEFAULT_ADMIN_PASS}
 
-# 5. GapGPT API Key
+# 6. GapGPT API Key
 read -p "Enter GapGPT / OpenAI API Key [Press Enter to use existing key]: " AI_KEY
 AI_KEY=${AI_KEY:-"sk-qObNXitygRsmutSXMGJaW6vo8TNeVcVgxpd6QBwDAm5dynJf"}
 
 echo -e "\n${YELLOW}Step 2: Installing System Packages & Dependencies${NC}"
 echo "------------------------------------------------------"
+# Fix any conflicting old Ubuntu node libraries
+apt-get remove -y libnode-dev libnode72 2>/dev/null || true
+dpkg --configure -a 2>/dev/null || true
+apt-get --fix-broken install -y 2>/dev/null || true
+
 apt-get update
 apt-get install -y curl git ufw ca-certificates gnupg lsb-release build-essential
 
-# Install Node.js 20 LTS if not present
+# Install or upgrade Node.js 20 LTS if not present
 if ! command -v node &> /dev/null || [[ $(node -v) != v20* && $(node -v) != v22* ]]; then
   echo "Installing Node.js 20 LTS..."
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  apt-get install -y nodejs
+  # Ensure dpkg force overwrite on any remnant common.gypi
+  apt-get install -y -o Dpkg::Options::="--force-overwrite" nodejs
 fi
 echo -e "${GREEN}Node version: $(node -v)${NC}"
 
@@ -150,7 +160,7 @@ GAPGPT_BASE_URL="https://api.gapgpt.app/v1"
 
 # Environment
 NODE_ENV="production"
-PORT=3000
+PORT=${APP_PORT}
 EOF
 
 chown $REAL_USER:$REAL_USER "$APP_DIR/.env"
@@ -178,7 +188,7 @@ echo -e "\n${YELLOW}Step 7: Configuring Nginx Reverse Proxy${NC}"
 echo "------------------------------------------------------"
 cat > /etc/nginx/sites-available/gym-scale <<EOF
 upstream gymscale_upstream {
-    server 127.0.0.1:3000;
+    server 127.0.0.1:${APP_PORT};
     keepalive 64;
 }
 
@@ -243,7 +253,6 @@ server {
 EOF
 
 ln -sf /etc/nginx/sites-available/gym-scale /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
 
