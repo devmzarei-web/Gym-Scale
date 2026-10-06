@@ -25,22 +25,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString())
           .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString())
 
-        const configuredAdmin = process.env.ADMIN_USERNAME?.toLowerCase() || "admin"
-        const isAdminAlias =
-          input.toLowerCase() === configuredAdmin ||
-          input.toLowerCase() === "admin-nutri" ||
-          input.toLowerCase() === "admin"
-
-        // Find trainer or client in DB by email, username prefix, or phone
+        // Find trainer or client in DB by email or phone
         let user: any = await prisma.trainer.findFirst({
           where: {
             OR: [
               { email: input.toLowerCase() },
               { email: cleanInput.toLowerCase() },
-              { email: `${input.toLowerCase()}@nutritrain.ir` },
               { phone: input },
               { phone: cleanInput },
-              ...(isAdminAlias ? [{ role: "SUPER_ADMIN" as const }] : []),
             ],
           },
         })
