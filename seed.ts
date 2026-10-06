@@ -122,8 +122,9 @@ async function main() {
   console.log(`Successfully seeded ${exercises.length} clean exercises!`)
 
   // SuperAdmin setup
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@nutritrain.ir'
-  const adminPassword = 'Number05$'
+  const rawAdminUser = process.env.ADMIN_USERNAME || process.env.ADMIN_EMAIL || 'admin@nutritrain.ir'
+  const adminEmail = rawAdminUser.includes('@') ? rawAdminUser.toLowerCase() : `${rawAdminUser.toLowerCase()}@nutritrain.ir`
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Number05'
   const hashedPassword = await bcrypt.hash(adminPassword, 10)
 
   const existingSuperAdmin = await (prisma as any).trainer.findFirst({
@@ -155,12 +156,13 @@ async function main() {
     await (prisma as any).trainer.update({
       where: { id: existingSuperAdmin.id },
       data: { 
+        email: adminEmail,
         password: hashedPassword,
         securityQuestion: defaultQuestion,
         securityAnswer: hashedAnswer
       }
     })
-    console.log('SuperAdmin password updated successfully to Number05$')
+    console.log(`SuperAdmin credentials updated successfully! Email: ${adminEmail}, Password: ${adminPassword}`)
   }
 
   // Seed Predefined Food Bank
