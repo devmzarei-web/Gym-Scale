@@ -4,9 +4,12 @@ import { useState } from "react"
 import { Edit3, Trash2, X, Loader2, KeyRound, CheckCircle, XCircle, Zap } from "lucide-react"
 import { deleteTrainerAccount, updateTrainerAccount, toggleTrainerApproval } from "@/app/actions/admin"
 import { toast } from "sonner"
+import { TierSelectDropdown } from "@/components/tier-select-dropdown"
+import { SubscriptionTierType } from "@/lib/subscription"
 
 export function TrainerTableActions({ trainer }: { trainer: any }) {
   const [isEditing, setIsEditing] = useState(false)
+  const [tier, setTier] = useState<SubscriptionTierType>(trainer.tier || "TRIAL")
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [approving, setApproving] = useState(false)
@@ -162,24 +165,20 @@ export function TrainerTableActions({ trainer }: { trainer: any }) {
               <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 space-y-3">
                 <span className="block text-xs font-bold text-emerald-950 flex items-center gap-1.5 font-heading">
                   <Zap className="h-4 w-4 text-emerald-600 animate-pulse" />
-                  مدیریت سهمیه هوش مصنوعی (AI Requests Quota)
+                  مدیریت سطح اشتراک و سهمیه‌ها
                 </span>
                 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] text-emerald-900 font-bold mb-1">سطح اشتراک مربی (Tier)</label>
-                    <select
-                      name="tier"
-                      defaultValue={trainer.tier || "FREE"}
-                      className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold"
-                    >
-                      <option value="FREE">رایگان (FREE)</option>
-                      <option value="PRO">حرفه‌ای (PRO)</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-[11px] text-emerald-900 font-bold mb-1.5">انتخاب سطح اشتراک و پلن</label>
+                  <TierSelectDropdown
+                    value={tier}
+                    onChange={(newTier) => setTier(newTier)}
+                  />
+                </div>
 
+                <div className="grid grid-cols-2 gap-3 pt-1">
                   <div>
-                    <label className="block text-[11px] text-emerald-900 font-bold mb-1">سهمیه روزانه هوش مصنوعی</label>
+                    <label className="block text-[11px] text-emerald-900 font-bold mb-1">سهمیه هوش مصنوعی (ماهانه)</label>
                     <input
                       type="number"
                       name="aiQuota"
@@ -189,28 +188,42 @@ export function TrainerTableActions({ trainer }: { trainer: any }) {
                       className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 text-xs font-extrabold text-slate-900"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-[11px] text-emerald-900 font-bold mb-1">سقف شاگردان فعال</label>
+                    <input
+                      type="number"
+                      name="maxClients"
+                      defaultValue={trainer.maxClients ?? 5}
+                      min={1}
+                      className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                <label className="text-xs font-bold text-slate-800 cursor-pointer flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="isDemo"
-                    defaultChecked={trainer.isDemo}
-                    className="accent-emerald-600 rounded h-4 w-4"
-                  />
-                  حساب دمو (آزمایشی)
-                </label>
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-emerald-200/60">
+                  <div>
+                    <label className="block text-[11px] text-emerald-900 font-bold mb-1">تمدید اعتبار (به تعداد روز)</label>
+                    <input
+                      type="number"
+                      name="extendDays"
+                      placeholder="مثال: ۳۰"
+                      min={1}
+                      className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-1.5 text-xs text-slate-900"
+                    />
+                  </div>
 
-                <div className="pt-2 border-t border-slate-200">
-                  <label className="block text-[11px] text-slate-500 mb-1">سقف مجاز شاگردان</label>
-                  <input
-                    type="number"
-                    name="maxClients"
-                    defaultValue={trainer.maxClients ?? 10}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900"
-                  />
+                  <div>
+                    <label className="block text-[10px] text-slate-500 mb-1">
+                      یا تاریخ انقضای دستی:
+                    </label>
+                    <input
+                      type="date"
+                      name="expiresAt"
+                      defaultValue={trainer.expiresAt ? new Date(trainer.expiresAt).toISOString().split("T")[0] : ""}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800"
+                    />
+                  </div>
                 </div>
               </div>
 

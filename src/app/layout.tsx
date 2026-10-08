@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
+import { SubscriptionWarningBanner } from "@/components/subscription-warning-banner"
 import { Providers } from "@/components/providers"
 import { Toaster } from "sonner"
 
@@ -18,6 +19,7 @@ export default function RootLayout({
     <html lang="fa" dir="rtl" className="light">
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased selection:bg-emerald-600 selection:text-white">
         <Providers>
+          <SubscriptionWarningBanner />
           <Navbar />
           <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
             {children}

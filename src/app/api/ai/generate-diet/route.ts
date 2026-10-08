@@ -2,85 +2,97 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { checkRateLimit } from "@/lib/rate-limiter"
+import { getTrainerSubscriptionState, TIER_CONFIGS } from "@/lib/subscription"
 
-// Post-processor to scale AI generated meal portions to hit the target calories with 100% accuracy
+// Post-processor and validator to scale and sanitize AI generated meal portions to hit target calories
 function normalizeAndScaleSections(sections: any[], targetCal: number) {
   if (!sections || !Array.isArray(sections) || sections.length === 0) return sections
 
+  const defaultColors = ["amber", "emerald", "blue", "teal", "rose"]
+  const defaultNames = [
+    "وعده ۱: صبحانه انرژی‌بخش",
+    "وعده ۲: میان‌وعده / ناهار سبک",
+    "وعده ۳: وعده اصلی / ناهار",
+    "وعده ۴: شام بازیابی عضلانی",
+    "وعده ۵: مکمل‌های ورزشی و دستورالعمل‌های تکمیلی",
+  ]
+
   // Calculate sum of calories ONLY across food meal sections (excluding supplement section)
   let totalAiCal = 0
-  sections.forEach((sec) => {
-    const isSuppSec = sec.mealName?.includes("مکمل") || sec.id === "m5"
+  sections.forEach((sec, idx) => {
+    const isSuppSec = idx === 4 || sec.mealName?.includes("مکمل") || sec.id === "m5"
     if (!isSuppSec && sec.rows && Array.isArray(sec.rows)) {
       sec.rows.forEach((r: any) => {
-        totalAiCal += parseFloat(r.calories || 0) || 0
+        const c = parseFloat(r.calories || 0) || 0
+        totalAiCal += Math.max(0, c)
       })
     }
   })
 
-  if (totalAiCal <= 0 || !targetCal) return sections
-
-  // Calculate precision scaling ratio for food meals
-  const scale = targetCal / totalAiCal
+  // Calculate precision scaling ratio for food meals, clamped between 0.6 and 1.6 to prevent portion distortion
+  const rawScale = totalAiCal > 0 && targetCal > 0 ? targetCal / totalAiCal : 1
+  const scale = Math.max(0.6, Math.min(1.6, rawScale))
 
   return sections.map((sec, secIdx) => {
-    const isSuppSec = sec.mealName?.includes("مکمل") || sec.id === "m5"
+    const isSuppSec = secIdx === 4 || sec.mealName?.includes("مکمل") || sec.id === "m5"
+
+    const sanitizedRows = (sec.rows || []).map((r: any, rIdx: number) => {
+      const origCal = parseFloat(r.calories || 0) || 0
+      const origP = parseFloat(r.protein || 0) || 0
+      const origC = parseFloat(r.carbs || 0) || 0
+      const origF = parseFloat(r.fats || 0) || 0
+
+      if (isSuppSec) {
+        // Supplements section does not get calorie scaled
+        return {
+          id: r.id || `sup_${rIdx + 1}`,
+          name: String(r.name || "مکمل ورزشی"),
+          amount: String(r.amount || ""),
+          note: String(r.note || ""),
+          calories: Math.max(0, origCal),
+          protein: Math.max(0, origP),
+          carbs: Math.max(0, origC),
+          fats: Math.max(0, origF),
+        }
+      }
+
+      const scaledCal = Math.round(origCal * scale)
+      const scaledP = Math.round(origP * scale * 10) / 10
+      const scaledC = Math.round(origC * scale * 10) / 10
+      const scaledF = Math.round(origF * scale * 10) / 10
+
+      // Scale numeric values inside text string (e.g. "180 گرم" -> "220 گرم")
+      let scaledAmount = r.amount || ""
+      if (typeof scaledAmount === "string" && scale !== 1) {
+        scaledAmount = scaledAmount.replace(/(\d+(\.\d+)?)/g, (match) => {
+          const num = parseFloat(match)
+          if (!isNaN(num) && num > 0) {
+            const val = Math.round(num * scale * 10) / 10
+            return String(val)
+          }
+          return match
+        })
+      }
+
+      return {
+        id: r.id || `r_${secIdx + 1}_${rIdx + 1}`,
+        name: String(r.name || "ماده غذایی"),
+        amount: String(scaledAmount),
+        note: String(r.note || ""),
+        calories: scaledCal,
+        protein: scaledP,
+        carbs: scaledC,
+        fats: scaledF,
+      }
+    })
 
     return {
-      id: sec.id || `m_${secIdx + 1}`,
-      mealName: sec.mealName || `وعده ${secIdx + 1}`,
-      headerColor: sec.headerColor || ["amber", "emerald", "blue", "teal", "rose"][secIdx % 5],
+      id: sec.id || `m${secIdx + 1}`,
+      mealName: sec.mealName || defaultNames[secIdx % defaultNames.length],
+      headerColor: sec.headerColor || defaultColors[secIdx % defaultColors.length],
       mode: "table",
-      textNotes: sec.textNotes || "",
-      rows: (sec.rows || []).map((r: any, rIdx: number) => {
-        if (isSuppSec) {
-          // Supplements section does not get calorie scaled
-          return {
-            id: r.id || `r_${secIdx + 1}_${rIdx + 1}`,
-            name: r.name || "مکمل ورزشی",
-            amount: r.amount || "",
-            note: r.note || "",
-            calories: parseFloat(r.calories || 0) || 0,
-            protein: parseFloat(r.protein || 0) || 0,
-            carbs: parseFloat(r.carbs || 0) || 0,
-            fats: parseFloat(r.fats || 0) || 0,
-          }
-        }
-
-        const origCal = parseFloat(r.calories || 0) || 0
-        const origP = parseFloat(r.protein || 0) || 0
-        const origC = parseFloat(r.carbs || 0) || 0
-        const origF = parseFloat(r.fats || 0) || 0
-
-        const scaledCal = Math.round(origCal * scale)
-        const scaledP = Math.round(origP * scale * 10) / 10
-        const scaledC = Math.round(origC * scale * 10) / 10
-        const scaledF = Math.round(origF * scale * 10) / 10
-
-        // Scale numeric values inside text string (e.g. "180 گرم" -> "220 گرم")
-        let scaledAmount = r.amount || ""
-        if (typeof scaledAmount === "string" && scale !== 1) {
-          scaledAmount = scaledAmount.replace(/(\d+(\.\d+)?)/g, (match) => {
-            const num = parseFloat(match)
-            if (!isNaN(num) && num > 0) {
-              const val = Math.round(num * scale * 10) / 10
-              return String(val)
-            }
-            return match
-          })
-        }
-
-        return {
-          id: r.id || `r_${secIdx + 1}_${rIdx + 1}`,
-          name: r.name || "ماده غذایی",
-          amount: scaledAmount,
-          note: r.note || "",
-          calories: scaledCal,
-          protein: scaledP,
-          carbs: scaledC,
-          fats: scaledF,
-        }
-      }),
+      textNotes: String(sec.textNotes || ""),
+      rows: sanitizedRows,
     }
   })
 }
@@ -102,24 +114,32 @@ export async function POST(req: Request) {
       )
     }
 
-    // Check AI Quota
+    // Check AI Quota and Subscription Status
     const trainer = await prisma.trainer.findUnique({
       where: { id: session.user.id },
-      select: { tier: true, aiQuota: true, aiQuotaResetAt: true }
+      select: { tier: true, aiQuota: true, aiQuotaResetAt: true, expiresAt: true, role: true }
     })
     
     if (!trainer) {
       return NextResponse.json({ error: "حساب کاربری مربی یافت نشد" }, { status: 404 })
     }
+
+    const subStatus = getTrainerSubscriptionState(trainer.expiresAt, trainer.role)
+    if (subStatus.isLocked) {
+      return NextResponse.json({
+        error: "اعتبار اشتراک شما به پایان رسیده است. جهت تولید رژیم با هوش مصنوعی، لطفاً اشتراک خود را در NutriTrain تمدید فرمایید."
+      }, { status: 403 })
+    }
     
     const now = new Date()
     let currentQuota = trainer.aiQuota
+    const defaultTierQuota = TIER_CONFIGS[trainer.tier]?.defaultAiQuota ?? 3
     
-    // Daily quota reset
+    // Quota reset if period passed
     if (!trainer.aiQuotaResetAt || trainer.aiQuotaResetAt < now) {
-      currentQuota = trainer.tier === "PRO" ? 30 : 3;
+      currentQuota = defaultTierQuota
       const nextReset = new Date(now)
-      nextReset.setDate(now.getDate() + 1)
+      nextReset.setDate(now.getDate() + 30)
       nextReset.setHours(0, 0, 0, 0)
       
       await prisma.trainer.update({
@@ -129,7 +149,9 @@ export async function POST(req: Request) {
     }
     
     if (currentQuota <= 0) {
-      return NextResponse.json({ error: "سهمیه هوش مصنوعی شما برای امروز به پایان رسیده است. لطفاً حساب خود را به نسخه PRO ارتقا دهید یا فردا مراجعه کنید." }, { status: 403 })
+      return NextResponse.json({
+        error: "سهمیه هوش مصنوعی شما در این دوره به پایان رسیده است. لطفاً جهت افزایش سهمیه، اشتراک خود را ارتقا دهید."
+      }, { status: 403 })
     }
 
     const body = await req.json()
@@ -142,16 +164,100 @@ export async function POST(req: Request) {
       "https://api.gapgpt.ir/v1",
     ]
 
-    const systemPrompt = `شما یک دکتری تغذیه ورزشی ارشد و هوش مصنوعی بین‌المللی برنامه نویسی تغذیه (Scientific Diet AI Engine) هستید.
-پاسخ شما بر اساس آخرین مقالات و استانداردهای ISSN (International Society of Sports Nutrition) و ACSM تولید می‌شود.
+    const systemPrompt = `شما یک **Advanced Sports Nutrition Planning AI** هستید؛ یک موتور تخصصی طراحی برنامه تغذیه ورزشی که باید مانند یک متخصص ارشد تغذیه ورزشی، برنامه‌ریز تغذیه عملکردی و تحلیل‌گر تغذیه مبتنی بر شواهد عمل کند.
 
-الزامات دقیق خروجی:
-۱. علم روز تغذیه ورزشی (علم موازنه لوسین، زمان‌بندی کربوهیدرات و حفظ بافت عضلانی).
-۲. حداکثر پایبندی و تجربه کاربری بالا با غذاهای ایرانی لذیذ، ساده و قابل دسترس.
-۳. ارائه گزینه جایگزین (Alternative Meals) برای هر وعده غذایی در بخش textNotes.
-۴. تولید ۵ وعده کامل که وعده ۵ام (متقابلاً آخرین بخش) دقیقاً مربوط به "مکمل‌های ورزشی و دستورالعمل‌های تکمیلی" باشد.
+هدف شما تولید برنامه غذایی **دقیق، شخصی‌سازی‌شده، عملی، قابل پایبندی، مناسب فرهنگ غذایی ایرانی و سازگار با اهداف ورزشی** است.
+شما نباید صرفاً فهرستی از غذاها تولید کنید.
+ابتدا باید اهداف کالری و macronutrientها را تحلیل کنید، سپس وعده‌ها را از نظر انرژی، پروتئین، کربوهیدرات، چربی، کیفیت غذایی، زمان‌بندی و قابلیت اجرا طراحی کنید و در پایان یک کنترل کیفیت عددی انجام دهید.
 
-فرمت پاسخ باید دقیقاً JSON معتبر به شکل زیر باشد:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۱. اصول علمی
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+برنامه باید بر اساس اصول معتبر تغذیه ورزشی طراحی شود:
+* انرژی دریافتی متناسب با هدف
+* پروتئین کافی برای حفظ یا افزایش توده بدون چربی
+* توزیع منطقی پروتئین در وعده‌ها
+* توزیع مناسب کربوهیدرات متناسب با فعالیت و تمرین
+* دریافت چربی کافی
+* کیفیت و تنوع منابع غذایی
+* فیبر و مواد غذایی مغذی
+* hydration مناسب
+* زمان‌بندی منطقی وعده‌ها در رابطه با تمرین
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۲. اولویت اهداف عددی و تناقض ریاضی
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+اهداف ورودی سیستم:
+Calories: ${reqTargetCal} kcal
+Protein: ${targetProtein || 140} g
+Carbohydrates: ${targetCarbs || 220} g
+Fat: ${targetFats || 60} g
+
+فرمول پایه: Protein × 4 + Carbs × 4 + Fat × 9 ≈ Approximate Calories
+اگر بین calorie target و مجموع انرژی حاصل از macros اختلاف وجود داشت، اولویت به این ترتیب است:
+1. targetCalories
+2. targetProtein
+3. targetCarbs
+4. targetFats
+تلاش کنید ترکیب غذاها به نحوی طراحی شود که تا حد امکان به تمام اهداف بسیار نزدیک باشد.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۳. دقت مقادیر غذایی
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+مقدار هر ماده غذایی باید کاملاً واقع‌بینانه باشد.
+از مقادیر غیرمنطقی (مانند چند صد گرم روغن یا مقادیر عجیب گوشت) برای رسیدن مصنوعی به macro target پرهیز کنید.
+برای هر ماده غذایی:
+- amount باید واضح و مشخص باشد (مثلاً: "۱۸۰ گرم"، "۲ عدد"، "۱ لیوان").
+- calories، protein، carbs و fats باید مقادیر عددی معتبر (number) باشند.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۴. ساختار ۵ وعده و طراحی منو
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+برنامه باید دقیقاً شامل ۵ section باشد:
+Section 1: صبحانه انرژی‌بخش (گزینه اصلی A)
+Section 2: میان‌وعده / وعده سبک
+Section 3: وعده اصلی / ناهار
+Section 4: وعده اصلی / شام یا post-workout meal
+Section 5: مکمل‌های ورزشی و دستورالعمل‌های تکمیلی
+
+چهار section اول باید غذاهای واقعی باشند.
+Section پنجم نباید به یک وعده غذایی عادی تبدیل شود.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۵. غذاهای ایرانی و قابلیت اجرا
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+اولویت با غذاهایی است که در ایران به‌راحتی قابل تهیه، خوش‌طعم و برای زندگی روزمره مناسب هستند (مانند برنج کته، نان سنگک/جو، تخم‌مرغ، سینه مرغ، گوشت، ماهی، لبنیات، حبوبات، سیب‌زمینی، میوه، سبزیجات و مغزها).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۶. گزینه‌های جایگزین (Alternative Meals)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+برای هر یک از چهار وعده غذایی اصلی، در فیلد textNotes یک گزینه جایگزین کامل با فرمت زیر ارائه دهید:
+"گزینه جایگزین B: [ترکیب غذای جایگزین با مقادیر تقریبی هم‌سطح از نظر کالری و ماکرو]"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۷. بخش مکمل‌ها (Section 5)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Section پنجم دقیقاً باید با عنوان "وعده ۵: مکمل‌های ورزشی و دستورالعمل‌های تکمیلی" باشد.
+مکمل‌ها را فقط در صورت منطقی بودن بر اساس هدف و شرایط کاربر پیشنهاد دهید. مصرف هیچ مکملی (مانند وی یا کراتین) را اجباری نکنید.
+اگر مکمل خاصی لازم نیست یا اطلاعات کافی وجود ندارد، rows می‌تواند [] باشد و در textNotes دستورالعمل‌های عمومی، هیدراسیون و نحوه مصرف آب قرار گیرد.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۸. یادداشت‌های مربی و محدودیت‌ها
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+هدف: ${goal || "تناسب اندام و بهبود ترکیب بدنی"}
+یادداشت مربی: ${notes || "غذاهای در دسترس و استاندارد"}
+اگر notes شامل آلرژی، عدم تحمل غذایی، گیاه‌خواری یا محدودیت است، آن را به عنوان یک constraint سخت رعایت کنید. هیچ غذای ممنوعه‌ای نباید در برنامه یا گزینه‌های جایگزین ظاهر شود.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۹. کنترل کیفیت داخلی و قوانین خروجی JSON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+قبل از خروجی نهایی مطمئن شوید:
+✓ دقیقاً ۵ section وجود دارد.
+✓ چهار section اول غذایی همراه با alternative در textNotes هستند.
+✓ مجموع روزانه بسیار نزدیک به ${reqTargetCal} kcal است.
+✓ پاسخ فقط و فقط JSON معتبر باشد (بدون Markdown، بدون \`\`\`json و بدون متن اضافی).
+
+فرمت دقیق ساختار JSON:
 {
   "sections": [
     {
@@ -171,7 +277,7 @@ export async function POST(req: Request) {
           "fats": 4
         }
       ],
-      "textNotes": "💡 گزینه جایگزین (B): ۲ عدد تخم‌مرغ کامل + ۲ سفیده + ۵۰ گرم نان سنگک"
+      "textNotes": "گزینه جایگزین B: ۲ عدد تخم‌مرغ کامل + ۲ سفیده + ۵۰ گرم نان سنگک"
     },
     {
       "id": "m5",
@@ -181,47 +287,60 @@ export async function POST(req: Request) {
       "rows": [
         {
           "id": "sup1",
-          "name": "پروتئین وی (Whey Isolate)",
+          "name": "پروتئین وی (اختیاری)",
           "amount": "۱ اسکوپ (۳۰ گرم)",
-          "note": "بلافاصله پس از اتمام تمرین جهت تسریع سنتز عضلانی",
+          "note": "بعد از تمرین جهت تسریع بازسازی عضلانی",
           "calories": 120,
           "protein": 24,
           "carbs": 2,
           "fats": 1
-        },
-        {
-          "id": "sup2",
-          "name": "کراتین مونوهیدرات (Creatine)",
-          "amount": "۵ گرم روزانه",
-          "note": "بعد تمرین با شیک پروتئین جهت افزایش قدرت",
-          "calories": 0,
-          "protein": 0,
-          "carbs": 0,
-          "fats": 0
-        },
-        {
-          "id": "sup3",
-          "name": "امگا ۳ (Omega-3 Fish Oil)",
-          "amount": "۱ عدد (۱۰۰۰mg)",
-          "note": "همراه با وعده ناهار برای کاهش التهاب مفاصل",
-          "calories": 10,
-          "protein": 0,
-          "carbs": 0,
-          "fats": 1
         }
       ],
-      "textNotes": "نکته: مصرف مکمل‌ها اختیاری بوده و مکمل کراتین حتماً همراه آب فراوان نوشیده شود."
+      "textNotes": "نکته: مصرف مکمل‌ها کاملاً اختیاری است. مصرف حداقل ۲.۵ تا ۳ لیتر آب در طول روز توصیه می‌شود."
     }
   ]
 }`
 
-    const userPrompt = `لطفاً یک برنامه تغذیه ورزشی فوق‌علمی کامل (شامل ۴ وعده غذایی اصلی با گزینه‌های جایگزین + ۱ وعده اختصاصی مکمل‌های ورزشی) به زبان فارسی تنظیم کنید:
-- کالری کل روزانه غذاها: ${reqTargetCal} kcal
-- پروتئین هدف: ${targetProtein || 140} گرم
-- کربوهیدرات هدف: ${targetCarbs || 220} گرم
-- چربی هدف: ${targetFats || 60} گرم
-- هدف ورزشی: ${goal || "کاهش چربی و حفظ/رشد عضلانی"}
-- توضیحات مربی: ${notes || "غذاهای دسترس در بازار ایران"}`
+    const userPrompt = `بر اساس اطلاعات زیر، یک برنامه تغذیه ورزشی کاملاً شخصی‌سازی‌شده، دقیق و قابل اجرا تولید کن.
+قبل از تولید JSON، اطلاعات را به صورت یک سیستم واحد تحلیل کن و بین کالری، macronutrientها، هدف، محدودیت‌های غذایی و قابلیت اجرای واقعی برنامه تعادل برقرار کن.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+اهداف تغذیه‌ای
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+کالری هدف روزانه: ${reqTargetCal} kcal
+پروتئین هدف: ${targetProtein || 140} g
+کربوهیدرات هدف: ${targetCarbs || 220} g
+چربی هدف: ${targetFats || 60} g
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+هدف برنامه
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+هدف: ${goal || "کاهش چربی و حفظ/رشد عضلانی"}
+توضیحات و محدودیت‌های مربی: ${notes || "غذاهای در دسترس در بازار ایران"}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+دستور طراحی
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+یک برنامه روزانه شامل دقیقاً ۵ section تولید کن:
+1. صبحانه
+2. وعده غذایی دوم
+3. وعده غذایی سوم
+4. وعده غذایی چهارم
+5. مکمل‌های ورزشی و دستورالعمل‌های تکمیلی
+
+چهار وعده اول باید شامل غذاهای واقعی و قابل تهیه باشند.
+برای هر چهار وعده غذایی:
+* مواد غذایی را با مقدار دقیق ارائه کن.
+* calories، protein، carbs و fats را برای هر ماده با مقادیر عددی معتبر ثبت کن.
+* در textNotes دقیقاً یک Alternative Meal ارائه کن.
+* alternative باید از نظر کالری و macronutrients تقریباً قابل جایگزینی با گزینه اصلی باشد.
+
+برای section پنجم:
+* مکمل‌ها را فقط در صورت منطقی بودن پیشنهاد کن.
+* مکملی را صرفاً به دلیل رایج بودن آن اجباری نکن.
+* در صورت نبود نیاز یا اطلاعات کافی، rows را خالی نگه دار و در textNotes نکات تکمیلی و hydration بنویس.
+
+فقط JSON معتبر برگردان. هیچ متن دیگری خارج از JSON ننویس.`
 
     if (apiKey) {
       for (const baseUrl of baseUrls) {

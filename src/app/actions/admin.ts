@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache"
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
 
+import { TIER_CONFIGS, SubscriptionTierType } from "@/lib/subscription"
+
 function generateDefaultTrainerCode() {
   const num = Math.floor(1000 + Math.random() * 9000)
   return `NT-${num}`
@@ -16,13 +18,28 @@ export async function createTrainerAccount(formData: FormData) {
   const phone = (formData.get("phone") as string) || null
   const customCode = (formData.get("trainerCode") as string) || null
   const isDemo = formData.get("isDemo") === "on"
-  const maxClients = formData.get("maxClients") ? parseInt(formData.get("maxClients") as string) : 10
+  
+  const rawTier = (formData.get("tier") as string) || "TRIAL"
+  const tier: SubscriptionTierType = (["TRIAL", "STARTER", "PRO", "FREE"].includes(rawTier)
+    ? rawTier
+    : "TRIAL") as SubscriptionTierType
+  const tierConfig = TIER_CONFIGS[tier] || TIER_CONFIGS.TRIAL
+
+  const maxClients = formData.get("maxClients")
+    ? parseInt(formData.get("maxClients") as string)
+    : tierConfig.defaultMaxClients
+
   const canCreateDiets = formData.get("canCreateDiets") === "on"
   const canCreateRoutines = formData.get("canCreateRoutines") === "on"
   const canAccessRecipes = formData.get("canAccessRecipes") === "on"
-  const durationDays = formData.get("durationDays") ? parseInt(formData.get("durationDays") as string) : null
-  const aiQuota = formData.get("aiQuota") ? parseInt(formData.get("aiQuota") as string) : 3
-  const tier = (formData.get("tier") as string) === "PRO" ? "PRO" : "FREE"
+  
+  const durationDays = formData.get("durationDays")
+    ? parseInt(formData.get("durationDays") as string)
+    : (isDemo ? tierConfig.defaultValidityDays : null)
+
+  const aiQuota = formData.get("aiQuota")
+    ? parseInt(formData.get("aiQuota") as string)
+    : tierConfig.defaultAiQuota
 
   if (!name || !email || !password) {
     throw new Error("نام، ایمیل و کلمه عبور الزامی هستند.")
@@ -43,7 +60,7 @@ export async function createTrainerAccount(formData: FormData) {
   const hashedPassword = await bcrypt.hash(password, 10)
 
   let expiresAt: Date | null = null
-  if (isDemo && durationDays) {
+  if (durationDays && durationDays > 0) {
     expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + durationDays)
   }
@@ -78,29 +95,60 @@ export async function updateTrainerAccount(trainerId: string, formData: FormData
   const password = (formData.get("password") as string) || null
   const trainerCode = (formData.get("trainerCode") as string) || null
   const isDemo = formData.get("isDemo") === "on"
-  const maxClients = formData.get("maxClients") ? parseInt(formData.get("maxClients") as string) : 10
+  const maxClients = formData.get("maxClients") ? parseInt(formData.get("maxClients") as string) : undefined
   const canCreateDiets = formData.get("canCreateDiets") === "on"
   const canCreateRoutines = formData.get("canCreateRoutines") === "on"
   const canAccessRecipes = formData.get("canAccessRecipes") === "on"
   const aiQuota = formData.get("aiQuota") ? parseInt(formData.get("aiQuota") as string) : undefined
-  const tier = (formData.get("tier") as string) || undefined
+  const rawTier = (formData.get("tier") as string) || undefined
 
   const dataToUpdate: any = {
     name,
     phone,
     isDemo,
-    maxClients,
     canCreateDiets,
     canCreateRoutines,
     canAccessRecipes,
+  }
+
+  if (maxClients !== undefined && !isNaN(maxClients)) {
+    dataToUpdate.maxClients = maxClients
   }
 
   if (aiQuota !== undefined && !isNaN(aiQuota)) {
     dataToUpdate.aiQuota = aiQuota
   }
 
-  if (tier && (tier === "PRO" || tier === "FREE")) {
-    dataToUpdate.tier = tier
+  if (rawTier && ["TRIAL", "STARTER", "PRO", "FREE"].includes(rawTier)) {
+    dataToUpdate.tier = rawTier
+  }
+
+  // Handle explicit expiration date update or clearing
+  const expiresAtStr = formData.get("expiresAt") as string
+  if (expiresAtStr !== null && expiresAtStr !== undefined) {
+    if (expiresAtStr.trim() === "") {
+      dataToUpdate.expiresAt = null
+    } else {
+      const parsedDate = new Date(expiresAtStr)
+      if (!isNaN(parsedDate.getTime())) {
+        dataToUpdate.expiresAt = parsedDate
+      }
+    }
+  }
+
+  // Handle extending expiration by N days
+  const extendDays = formData.get("extendDays") ? parseInt(formData.get("extendDays") as string) : null
+  if (extendDays && !isNaN(extendDays) && extendDays > 0) {
+    const existingTrainer = await prisma.trainer.findUnique({
+      where: { id: trainerId },
+      select: { expiresAt: true },
+    })
+    const base = existingTrainer?.expiresAt && existingTrainer.expiresAt > new Date()
+      ? existingTrainer.expiresAt
+      : new Date()
+    const newExp = new Date(base)
+    newExp.setDate(newExp.getDate() + extendDays)
+    dataToUpdate.expiresAt = newExp
   }
 
   if (trainerCode && trainerCode.trim().length > 0) {

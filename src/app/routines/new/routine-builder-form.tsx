@@ -28,6 +28,7 @@ import { createRoutine, updateRoutine } from "@/app/actions/routine"
 import { GifUploadInput } from "@/components/gif-upload-input"
 import { Modal } from "@/components/ui/modal"
 import { toast } from "sonner"
+import { CompactSelect } from "@/components/compact-select"
 
 const DAYS_OF_WEEK = [
   { id: "SATURDAY", label: "شنبه" },
@@ -653,21 +654,19 @@ export function RoutineBuilderForm({
 
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">تخصیص به شاگرد (اختیاری)</label>
-            <select
+            <CompactSelect
               value={clientId}
-              onChange={(e) => {
-                setClientId(e.target.value)
-                if (e.target.value) setIsTemplate(false)
+              onChange={(val) => {
+                setClientId(val)
+                if (val) setIsTemplate(false)
               }}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 transition-colors"
-            >
-              <option value="">بدون تخصیص (ذخیره به عنوان قالب آماده)</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              placeholder="بدون تخصیص (ذخیره به عنوان قالب آماده)"
+              options={[
+                { value: "", label: "بدون تخصیص (قالب آماده)" },
+                ...clients.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              size="md"
+            />
           </div>
         </div>
 
@@ -739,23 +738,20 @@ export function RoutineBuilderForm({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <select
-                    value={dayItem.day}
-                    onChange={(e) =>
-                      setDays((prev) =>
-                        prev.map((d) =>
-                          d.id === dayItem.id ? { ...d, day: e.target.value as DayKey } : d
+                  <div className="w-28">
+                    <CompactSelect
+                      value={dayItem.day}
+                      onChange={(val) =>
+                        setDays((prev) =>
+                          prev.map((d) =>
+                            d.id === dayItem.id ? { ...d, day: val as DayKey } : d
+                          )
                         )
-                      )
-                    }
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700"
-                  >
-                    {DAYS_OF_WEEK.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.label}
-                      </option>
-                    ))}
-                  </select>
+                      }
+                      options={DAYS_OF_WEEK.map((d) => ({ value: d.id, label: d.label }))}
+                      size="sm"
+                    />
+                  </div>
 
                   {days.length > 1 && (
                     <button
@@ -867,20 +863,20 @@ export function RoutineBuilderForm({
 
                             {/* Exercise Dropdown OR Custom Text Field */}
                             {!ex.isCustom ? (
-                              <select
-                                value={ex.name}
-                                onChange={(e) =>
-                                  handleUpdateExercise(dayItem.id, ex.id, "name", e.target.value)
-                                }
-                                className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 focus:outline-hidden focus:border-emerald-600 flex-1"
-                              >
-                                <option value="">-- انتخاب حرکت ({ex.muscleGroup}) --</option>
-                                {filteredExercises.map((dictItem) => (
-                                  <option key={dictItem.id} value={dictItem.name}>
-                                    {dictItem.name}
-                                  </option>
-                                ))}
-                              </select>
+                              <div className="flex-1 min-w-[200px]">
+                                <CompactSelect
+                                  value={ex.name}
+                                  onChange={(val) =>
+                                    handleUpdateExercise(dayItem.id, ex.id, "name", val)
+                                  }
+                                  placeholder={`-- انتخاب حرکت (${ex.muscleGroup}) --`}
+                                  options={filteredExercises.map((dictItem) => ({
+                                    value: dictItem.name,
+                                    label: dictItem.name,
+                                  }))}
+                                  size="sm"
+                                />
+                              </div>
                             ) : (
                               <input
                                 type="text"
@@ -932,19 +928,14 @@ export function RoutineBuilderForm({
                                 <label className="block text-[10px] font-bold text-amber-800 mb-1">
                                   گروه عضله حرکت دوم
                                 </label>
-                                <select
+                                <CompactSelect
                                   value={ex.pairedMuscleGroup || ex.muscleGroup}
-                                  onChange={(e) =>
-                                    handleUpdateExercise(dayItem.id, ex.id, "pairedMuscleGroup", e.target.value)
+                                  onChange={(val) =>
+                                    handleUpdateExercise(dayItem.id, ex.id, "pairedMuscleGroup", val)
                                   }
-                                  className="w-full bg-white border border-amber-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800"
-                                >
-                                  {MUSCLE_GROUPS.map((g) => (
-                                    <option key={g} value={g}>
-                                      {g}
-                                    </option>
-                                  ))}
-                                </select>
+                                  options={MUSCLE_GROUPS}
+                                  size="sm"
+                                />
                               </div>
 
                               <div className="sm:col-span-8 flex items-center gap-2">
@@ -953,22 +944,20 @@ export function RoutineBuilderForm({
                                     حرکت دوم سوپرست
                                   </label>
                                   {!ex.isPairedCustom ? (
-                                    <select
+                                    <CompactSelect
                                       value={ex.pairedExerciseName || ""}
-                                      onChange={(e) =>
-                                        handleUpdateExercise(dayItem.id, ex.id, "pairedExerciseName", e.target.value)
+                                      onChange={(val) =>
+                                        handleUpdateExercise(dayItem.id, ex.id, "pairedExerciseName", val)
                                       }
-                                      className="w-full bg-white border border-amber-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900"
-                                    >
-                                      <option value="">-- انتخاب حرکت دوم سوپرست --</option>
-                                      {exerciseDictionary
+                                      placeholder="-- انتخاب حرکت دوم سوپرست --"
+                                      options={exerciseDictionary
                                         .filter((d) => d.muscleGroup === (ex.pairedMuscleGroup || ex.muscleGroup))
-                                        .map((dictItem) => (
-                                          <option key={dictItem.id} value={dictItem.name}>
-                                            {dictItem.name}
-                                          </option>
-                                        ))}
-                                    </select>
+                                        .map((dictItem) => ({
+                                          value: dictItem.name,
+                                          label: dictItem.name,
+                                        }))}
+                                      size="sm"
+                                    />
                                   ) : (
                                     <input
                                       type="text"
@@ -1036,22 +1025,20 @@ export function RoutineBuilderForm({
                                     حرکت دوم تری‌ست
                                   </label>
                                   {!ex.isPairedCustom ? (
-                                    <select
+                                    <CompactSelect
                                       value={ex.pairedExerciseName || ""}
-                                      onChange={(e) =>
-                                        handleUpdateExercise(dayItem.id, ex.id, "pairedExerciseName", e.target.value)
+                                      onChange={(val) =>
+                                        handleUpdateExercise(dayItem.id, ex.id, "pairedExerciseName", val)
                                       }
-                                      className="w-full bg-white border border-purple-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900"
-                                    >
-                                      <option value="">-- انتخاب حرکت دوم --</option>
-                                      {exerciseDictionary
+                                      placeholder="-- انتخاب حرکت دوم --"
+                                      options={exerciseDictionary
                                         .filter((d) => d.muscleGroup === (ex.pairedMuscleGroup || ex.muscleGroup))
-                                        .map((dictItem) => (
-                                          <option key={dictItem.id} value={dictItem.name}>
-                                            {dictItem.name}
-                                          </option>
-                                        ))}
-                                    </select>
+                                        .map((dictItem) => ({
+                                          value: dictItem.name,
+                                          label: dictItem.name,
+                                        }))}
+                                      size="sm"
+                                    />
                                   ) : (
                                     <input
                                       type="text"
@@ -1089,19 +1076,14 @@ export function RoutineBuilderForm({
                                 <label className="block text-[10px] font-bold text-purple-800 mb-1">
                                   گروه عضله حرکت سوم
                                 </label>
-                                <select
+                                <CompactSelect
                                   value={ex.triMuscleGroup2 || ex.muscleGroup}
-                                  onChange={(e) =>
-                                    handleUpdateExercise(dayItem.id, ex.id, "triMuscleGroup2", e.target.value)
+                                  onChange={(val) =>
+                                    handleUpdateExercise(dayItem.id, ex.id, "triMuscleGroup2", val)
                                   }
-                                  className="w-full bg-white border border-purple-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800"
-                                >
-                                  {MUSCLE_GROUPS.map((g) => (
-                                    <option key={g} value={g}>
-                                      {g}
-                                    </option>
-                                  ))}
-                                </select>
+                                  options={MUSCLE_GROUPS}
+                                  size="sm"
+                                />
                               </div>
 
                               <div className="sm:col-span-8 flex items-center gap-2">
@@ -1110,22 +1092,20 @@ export function RoutineBuilderForm({
                                     حرکت سوم تری‌ست
                                   </label>
                                   {!ex.isTriCustom2 ? (
-                                    <select
+                                    <CompactSelect
                                       value={ex.triExerciseName2 || ""}
-                                      onChange={(e) =>
-                                        handleUpdateExercise(dayItem.id, ex.id, "triExerciseName2", e.target.value)
+                                      onChange={(val) =>
+                                        handleUpdateExercise(dayItem.id, ex.id, "triExerciseName2", val)
                                       }
-                                      className="w-full bg-white border border-purple-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900"
-                                    >
-                                      <option value="">-- انتخاب حرکت سوم --</option>
-                                      {exerciseDictionary
+                                      placeholder="-- انتخاب حرکت سوم --"
+                                      options={exerciseDictionary
                                         .filter((d) => d.muscleGroup === (ex.triMuscleGroup2 || ex.muscleGroup))
-                                        .map((dictItem) => (
-                                          <option key={dictItem.id} value={dictItem.name}>
-                                            {dictItem.name}
-                                          </option>
-                                        ))}
-                                    </select>
+                                        .map((dictItem) => ({
+                                          value: dictItem.name,
+                                          label: dictItem.name,
+                                        }))}
+                                      size="sm"
+                                    />
                                   ) : (
                                     <input
                                       type="text"
@@ -1502,15 +1482,16 @@ export function RoutineBuilderForm({
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">سطح آمادگی ورزشکار</label>
-                <select
+                <CompactSelect
                   value={aiFitnessLevel}
-                  onChange={(e) => setAiFitnessLevel(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600"
-                >
-                  <option value="مبتدی">مبتدی (Beginner)</option>
-                  <option value="متوسط">متوسط (Intermediate)</option>
-                  <option value="پیشرفته">پیشرفته (Advanced / Pro)</option>
-                </select>
+                  onChange={(val) => setAiFitnessLevel(val)}
+                  options={[
+                    { value: "مبتدی", label: "مبتدی (Beginner)" },
+                    { value: "متوسط", label: "متوسط (Intermediate)" },
+                    { value: "پیشرفته", label: "پیشرفته (Advanced / Pro)" },
+                  ]}
+                  size="md"
+                />
               </div>
             </div>
 
@@ -1521,16 +1502,17 @@ export function RoutineBuilderForm({
                   <span>مدل هوش مصنوعی (GapGPT Engine)</span>
                   <span className="text-[10px] text-emerald-600 font-bold">پشتیبانی از برترین مدل‌ها</span>
                 </label>
-                <select
+                <CompactSelect
                   value={aiSelectedModel}
-                  onChange={(e) => setAiSelectedModel(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 font-semibold"
-                >
-                  <option value="gpt-4o">GPT-4o (پیشنهادی - هوشمندترین مدل طراحی علمی)</option>
-                  <option value="gpt-4o-mini">GPT-4o Mini (سریع و بهینه)</option>
-                  <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (فوق دقیق در بیومکانیک)</option>
-                  <option value="deepseek-chat">DeepSeek Chat (مدل استدلالی هوشمند)</option>
-                </select>
+                  onChange={(val) => setAiSelectedModel(val)}
+                  options={[
+                    { value: "gpt-4o", label: "GPT-4o (پیشنهادی - هوشمندترین مدل طراحی علمی)" },
+                    { value: "gpt-4o-mini", label: "GPT-4o Mini (سریع و بهینه)" },
+                    { value: "claude-3-5-sonnet", label: "Claude 3.5 Sonnet (فوق دقیق در بیومکانیک)" },
+                    { value: "deepseek-chat", label: "DeepSeek Chat (مدل استدلالی هوشمند)" },
+                  ]}
+                  size="md"
+                />
               </div>
 
               <div>

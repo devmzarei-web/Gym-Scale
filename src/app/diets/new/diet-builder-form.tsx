@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 
 import { createDietPlan, updateDietPlan } from "@/app/actions/diet"
+import { CompactSelect } from "@/components/compact-select"
 import { toast } from "sonner"
 import { DEFAULT_FOODS, getFoodUnitConfig } from "@/lib/default-foods"
 
@@ -822,21 +823,19 @@ export function DietBuilderForm({
 
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">تخصیص به شاگرد (اختیاری)</label>
-            <select
+            <CompactSelect
               value={clientId}
-              onChange={(e) => {
-                setClientId(e.target.value)
-                if (e.target.value) setIsTemplate(false)
+              onChange={(val) => {
+                setClientId(val)
+                if (val) setIsTemplate(false)
               }}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-hidden focus:border-teal-600 transition-colors font-medium"
-            >
-              <option value="">بدون تخصیص (قالب آماده عمومی)</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              placeholder="بدون تخصیص (قالب آماده عمومی)"
+              options={[
+                { value: "", label: "بدون تخصیص (قالب آماده عمومی)" },
+                ...clients.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              size="md"
+            />
           </div>
         </div>
 
@@ -910,21 +909,22 @@ export function DietBuilderForm({
                 {/* Client Dropdown (At Top of Section 1) */}
                 <div className="space-y-1 bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
                   <label className="block text-slate-700 font-extrabold text-[11px]">انتخاب و تخصیص به شاگرد:</label>
-                  <select
+                  <CompactSelect
                     value={clientId}
-                    onChange={(e) => {
-                      setClientId(e.target.value)
-                      if (e.target.value) setIsTemplate(false)
+                    onChange={(val) => {
+                      setClientId(val)
+                      if (val) setIsTemplate(false)
                     }}
-                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-slate-900 font-bold text-xs focus:outline-none"
-                  >
-                    <option value="">بدون تخصیص (تنظیم عمومی رژیم)</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} {c.weight ? `(وزن: ${c.weight} کیلوگرم)` : ""}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="بدون تخصیص (تنظیم عمومی رژیم)"
+                    options={[
+                      { value: "", label: "بدون تخصیص (تنظیم عمومی رژیم)" },
+                      ...clients.map((c) => ({
+                        value: c.id,
+                        label: `${c.name} ${c.weight ? `(وزن: ${c.weight} کیلوگرم)` : ""}`,
+                      })),
+                    ]}
+                    size="sm"
+                  />
                 </div>
 
                 {/* Age */}
@@ -969,16 +969,17 @@ export function DietBuilderForm({
                 {/* Activity */}
                 <div className="space-y-1">
                   <label className="block text-slate-600 font-bold">سطح فعالیت:</label>
-                  <select
+                  <CompactSelect
                     value={calcActivity}
-                    onChange={(e) => setCalcActivity(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-slate-900 font-bold text-xs focus:outline-none"
-                  >
-                    <option value="1.2">کم‌تحرک (کاری پشت‌میزی)</option>
-                    <option value="1.375">تمرین ۱ تا ۳ روز در هفته</option>
-                    <option value="1.55">تمرین ۳ تا ۵ روز در هفته</option>
-                    <option value="1.725">تمرین ۶ تا ۷ روز در هفته</option>
-                  </select>
+                    onChange={(val) => setCalcActivity(val)}
+                    options={[
+                      { value: "1.2", label: "کم‌تحرک (کاری پشت‌میزی)" },
+                      { value: "1.375", label: "تمرین ۱ تا ۳ روز در هفته" },
+                      { value: "1.55", label: "تمرین ۳ تا ۵ روز در هفته" },
+                      { value: "1.725", label: "تمرین ۶ تا ۷ روز در هفته" },
+                    ]}
+                    size="sm"
+                  />
                 </div>
 
                 <button

@@ -18,6 +18,8 @@ enum Day {
 
 enum TrainerTier {
   FREE
+  TRIAL
+  STARTER
   PRO
 }
 
@@ -58,13 +60,13 @@ model Trainer {
   securityQuestion  String?
   securityAnswer    String?
   isDemo            Boolean   @default(false)
-  maxClients        Int?      @default(10) // Custom limit for demo trainers
+  maxClients        Int?      @default(5) // Default limit for trial trainers
   canCreateDiets    Boolean   @default(true)
   canCreateRoutines Boolean   @default(true)
   canAccessRecipes  Boolean   @default(true)
-  expiresAt         DateTime? // Expiration date for demo access
+  expiresAt         DateTime? // Expiration date for access
   
-  tier              TrainerTier @default(FREE)
+  tier              TrainerTier @default(TRIAL)
   aiQuota           Int       @default(3) // AI generation quota
   aiQuotaResetAt    DateTime? 
 

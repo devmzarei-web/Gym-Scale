@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
+import { getTrainerSubscriptionState } from "@/lib/subscription"
 
 export async function createClient(formData: FormData) {
   const name = formData.get("name") as string
@@ -24,14 +25,66 @@ export async function createClient(formData: FormData) {
     throw new Error("نام شاگرد الزامی است.")
   }
 
+  const session = await auth()
+  if (!session?.user?.id) {
+    throw new Error("دسترسی غیرمجاز. لطفاً وارد سیستم شوید.")
+  }
+
+  const role = (session.user as any).role
+  let targetTrainerId: string = session.user.id
+
+  if (role === "SUPER_ADMIN") {
+    const formTrainerId = formData.get("trainerId") as string
+    if (formTrainerId) {
+      targetTrainerId = formTrainerId
+    } else {
+      const firstTrainer = await prisma.trainer.findFirst({ where: { role: "TRAINER" } })
+      targetTrainerId = firstTrainer?.id || session.user.id
+    }
+  } else {
+    const trainer = await prisma.trainer.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        tier: true,
+        maxClients: true,
+        expiresAt: true,
+        role: true,
+      },
+    })
+
+    if (!trainer) {
+      throw new Error("حساب کاربری مربی یافت نشد.")
+    }
+
+    const { isLocked } = getTrainerSubscriptionState(trainer.expiresAt, trainer.role)
+    if (isLocked) {
+      throw new Error(
+        "اعتبار اشتراک شما به پایان رسیده است. جهت ثبت شاگرد جدید، لطفاً اشتراک خود را در NutriTrain تمدید فرمایید."
+      )
+    }
+
+    const activeCount = await prisma.client.count({
+      where: {
+        trainerId: trainer.id,
+        isDeleted: false,
+      },
+    })
+
+    const tierLimit = trainer.maxClients ?? 5
+    if (activeCount >= tierLimit) {
+      throw new Error(
+        `ظرفیت شاگردان شما در پلن فعلی تکمیل شده است (حداکثر ${tierLimit} شاگرد). جهت افزودن شاگرد بیشتر، لطفاً اشتراک خود را ارتقا دهید.`
+      )
+    }
+
+    targetTrainerId = trainer.id
+  }
+
   let hashedPassword: string | null = null
   if (rawPassword && rawPassword.trim() !== "") {
     hashedPassword = await bcrypt.hash(rawPassword.trim(), 10)
   }
-
-  const trainer = await prisma.trainer.findFirst({
-    where: { role: "TRAINER" },
-  })
 
   const client = await prisma.client.create({
     data: {
@@ -48,7 +101,7 @@ export async function createClient(formData: FormData) {
       isMuscular,
       primarySport,
       notes,
-      trainerId: trainer?.id || null,
+      trainerId: targetTrainerId,
     },
   })
 

@@ -38,9 +38,10 @@ export const authConfig: NextAuthConfig = {
 
       const isPublicApi = pathname.startsWith("/api/trainers/public")
       const isAccessDenied = pathname.startsWith("/access-denied")
+      const isExpiredPage = pathname.startsWith("/subscription-expired")
       const isOnLogin = pathname.startsWith("/login")
 
-      if (isPublicApi || isAccessDenied) {
+      if (isPublicApi || isAccessDenied || isExpiredPage) {
         return true
       }
 

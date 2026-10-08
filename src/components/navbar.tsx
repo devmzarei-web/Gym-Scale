@@ -5,9 +5,21 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Dumbbell, Utensils, Users, BookOpen, ChefHat, ShieldCheck, Home, TrendingUp, MessageSquare } from "lucide-react"
+import {
+  Dumbbell,
+  Utensils,
+  Users,
+  BookOpen,
+  ChefHat,
+  ShieldCheck,
+  Home,
+  TrendingUp,
+  MessageSquare,
+  Menu,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { NavbarUserDropdown } from "./navbar-user-dropdown"
+import { MobileNavDrawer } from "./mobile-nav-drawer"
 
 const trainerNavItems = [
   { href: "/clients", label: "شاگردان من", icon: Users },
@@ -19,7 +31,6 @@ const trainerNavItems = [
   { href: "/recipes", label: "دستورپخت‌ها", icon: ChefHat },
 ]
 
-
 const clientNavItems = [
   { href: "/client", label: "داشبورد من", icon: Home },
   { href: "/client/progress", label: "ثبت پیشرفت", icon: TrendingUp },
@@ -30,6 +41,7 @@ export function Navbar() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [unreadCount, setUnreadCount] = useState<number>(0)
+  const [mobileOpen, setMobileOpen] = useState<boolean>(false)
 
   useEffect(() => {
     if (!session?.user?.id) return
@@ -65,12 +77,11 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/90 backdrop-blur-md shadow-xs no-print">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs no-print">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        
-        {/* Brand Logo Image */}
-        <Link href={isClient ? "/client" : "/"} className="flex items-center group">
-          <div className="relative h-10 w-44">
+        {/* Brand Logo */}
+        <Link href={isClient ? "/client" : "/"} className="flex items-center group shrink-0">
+          <div className="relative h-10 w-40 sm:w-44">
             <Image
               src="/NutriTrain.png"
               alt="NutriTrain Logo"
@@ -81,11 +92,13 @@ export function Navbar() {
           </div>
         </Link>
 
-        {/* Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80">
+        {/* Desktop Single-Line Navigation Links (>= 1024px) */}
+        <nav className="hidden lg:flex items-center gap-1 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80">
           {currentNavItems.map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href || (item.href !== "/client" && item.href !== "/" && pathname.startsWith(item.href))
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/client" && item.href !== "/" && pathname.startsWith(item.href))
             const isMsg = (item as any).isMessages
 
             return (
@@ -93,14 +106,19 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all",
+                  "relative flex items-center gap-1.5 px-2.5 xl:px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap shrink-0",
                   isActive
                     ? "bg-white text-emerald-700 shadow-xs border border-slate-200"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                 )}
               >
-                <Icon className={cn("h-4 w-4", isActive ? "text-emerald-600" : "text-slate-400")} />
-                {item.label}
+                <Icon
+                  className={cn(
+                    "h-4 w-4 shrink-0",
+                    isActive ? "text-emerald-600" : "text-slate-400"
+                  )}
+                />
+                <span className="whitespace-nowrap">{item.label}</span>
 
                 {/* Unread Messages Badge */}
                 {isMsg && unreadCount > 0 && (
@@ -113,11 +131,28 @@ export function Navbar() {
           })}
         </nav>
 
-        {/* User Dropdown Button */}
-        <div className="flex items-center gap-3">
+        {/* Left Side: User Dropdown & Mobile Hamburger Toggle */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <NavbarUserDropdown />
+
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border border-slate-200"
+            aria-label="باز کردن منوی ناوبری"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
         </div>
       </div>
+
+      {/* Mobile Slide-out Navigation Drawer (< 1024px) */}
+      <MobileNavDrawer
+        isOpen={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        navItems={currentNavItems}
+        unreadCount={unreadCount}
+        pathname={pathname}
+      />
     </header>
   )
 }

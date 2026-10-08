@@ -1,5 +1,6 @@
-import { ShieldCheck, Clock, Users, UserCheck } from "lucide-react"
+import { ShieldCheck, Clock, Users, UserCheck, AlertTriangle } from "lucide-react"
 import prisma from "@/lib/prisma"
+import { TIER_CONFIGS, getTrainerSubscriptionState, SubscriptionTierType } from "@/lib/subscription"
 import { AddTrainerModal } from "./add-trainer-modal"
 import { TrainerTableActions } from "./trainer-table-actions"
 import { ClientTrainerAssignSelector } from "./client-trainer-assign-selector"
@@ -113,21 +114,34 @@ export default async function AdminPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border flex items-center gap-1 ${
-                          t.tier === "PRO"
-                            ? "bg-amber-50 text-amber-800 border-amber-200"
-                            : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                        }`}>
-                          ⚡ {t.aiQuota ?? 3} در روز ({t.tier || "FREE"})
-                        </span>
-                      </div>
+                      {(() => {
+                        const tierConf = TIER_CONFIGS[t.tier as SubscriptionTierType] || TIER_CONFIGS.TRIAL
+                        return (
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-lg border ${tierConf.badgeColor}`}>
+                              {tierConf.label}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-bold flex items-center gap-0.5">
+                              ⚡ {t.aiQuota ?? tierConf.defaultAiQuota} هوش مصنوعی
+                            </span>
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="p-4 font-semibold">
-                      {t.role === "SUPER_ADMIN" || !t.isDemo ? (
-                        <span className="text-emerald-700 font-bold">نامحدود ({t._count.clients} شاگرد)</span>
+                      {t.role === "SUPER_ADMIN" ? (
+                        <span className="text-emerald-700 font-bold">نامحدود</span>
                       ) : (
-                        <span className="text-slate-700">{t._count.clients} از {t.maxClients}</span>
+                        <div className="flex flex-col">
+                          <span className={`text-xs font-bold ${
+                            t._count.clients >= (t.maxClients ?? 5) ? "text-rose-600" : "text-slate-800"
+                          }`}>
+                            {t._count.clients} از {t.maxClients ?? 5} شاگرد
+                          </span>
+                          {t._count.clients >= (t.maxClients ?? 5) && (
+                            <span className="text-[9px] text-rose-500 font-bold">ظرفیت تکمیل</span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="p-4">
@@ -138,14 +152,41 @@ export default async function AdminPage() {
                       </div>
                     </td>
                     <td className="p-4 text-slate-500">
-                      {t.expiresAt ? (
-                        <span className="flex items-center gap-1 text-amber-700 font-semibold text-[11px]">
-                          <Clock className="h-3 w-3" />
-                          {new Date(t.expiresAt).toLocaleDateString("fa-IR")}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">نامحدود</span>
-                      )}
+                      {(() => {
+                        const subStatus = getTrainerSubscriptionState(t.expiresAt, t.role)
+                        if (t.role === "SUPER_ADMIN" || !t.expiresAt) {
+                          return <span className="text-slate-400 text-xs">نامحدود</span>
+                        }
+                        if (subStatus.isLocked) {
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                              <AlertTriangle className="h-3 w-3 text-rose-600" />
+                              قفل (منقضی)
+                            </span>
+                          )
+                        }
+                        if (subStatus.isGracePeriod) {
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md animate-pulse">
+                              <Clock className="h-3 w-3 text-amber-600" />
+                              مهلت ۳ روزه ({subStatus.graceDaysRemaining} روز)
+                            </span>
+                          )
+                        }
+                        return (
+                          <div className="flex flex-col text-[11px]">
+                            <span className="flex items-center gap-1 text-slate-700 font-semibold">
+                              <Clock className="h-3 w-3 text-slate-400" />
+                              {new Date(t.expiresAt).toLocaleDateString("fa-IR")}
+                            </span>
+                            {subStatus.daysRemaining !== null && (
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                ({subStatus.daysRemaining} روز باقی‌مانده)
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="p-4 text-center">
                       <TrainerTableActions trainer={t} />

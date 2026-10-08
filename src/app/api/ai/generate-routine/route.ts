@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { checkRateLimit } from "@/lib/rate-limiter"
+import { getTrainerSubscriptionState, TIER_CONFIGS } from "@/lib/subscription"
 
 // Helper to safely extract JSON from string (handling Markdown ```json blocks if present)
 function parseAiJson(rawText: string) {
@@ -16,6 +17,77 @@ function parseAiJson(rawText: string) {
       return JSON.parse(jsonSub)
     }
     throw e
+  }
+}
+
+// Backend Routine Validator, Sanitizer & Normalizer
+function validateAndNormalizeRoutine(raw: any, targetDaysCount: number) {
+  if (!raw || typeof raw !== "object") return null
+
+  const validDays = ["SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"]
+  const validMuscleGroups = ["سینه", "پشت", "سرشانه", "بازو", "پا", "ساق پا", "شکم و پهلو", "سایر"]
+
+  const summary = {
+    title: String(raw.routineSummary?.title || `برنامه تمرینی تخصصی (${targetDaysCount} روز در هفته)`),
+    description: String(raw.routineSummary?.description || ""),
+    primarySport: String(raw.routineSummary?.primarySport || "ورزش عمومی"),
+    targetMuscleGroups: Array.isArray(raw.routineSummary?.targetMuscleGroups)
+      ? raw.routineSummary.targetMuscleGroups.map(String)
+      : ["سینه", "پشت", "سرشانه", "پا"],
+    coachNotes: String(raw.routineSummary?.coachNotes || "")
+      .replace(/^(نکته:|توصیه مربی:|دستورالعمل:)\s*/gi, "")
+      .trim(),
+  }
+
+  let days = Array.isArray(raw.workoutDays) ? raw.workoutDays : []
+  if (days.length === 0) return null
+
+  const trimmedDays = days.slice(0, targetDaysCount)
+  const normalizedDays = trimmedDays.map((d: any, dIdx: number) => {
+    const dayKey = validDays.includes(d.day) ? d.day : validDays[dIdx % validDays.length]
+    const label = String(d.label || `روز ${dIdx + 1}`)
+    const exercises = Array.isArray(d.exercises)
+      ? d.exercises.map((ex: any) => {
+          let groupType = String(ex.groupType || "NORMAL").toUpperCase()
+          if (groupType === "STRAIGHT_SET" || !["NORMAL", "SUPERSET", "TRISET", "DROPSET", "TEMPO", "REST_PAUSE", "CIRCUIT"].includes(groupType)) {
+            groupType = "NORMAL"
+          }
+
+          const muscleGroup = validMuscleGroups.includes(ex.muscleGroup) ? ex.muscleGroup : "سایر"
+          const sets = typeof ex.sets === "number" ? Math.max(1, Math.min(10, ex.sets)) : parseInt(ex.sets) || 3
+          const repetitions = String(ex.repetitions || "10-12")
+          const restTime = String(ex.restTime || "60 ثانیه")
+          const customDescription = String(ex.customDescription || "").trim()
+
+          return {
+            id: ex.id || `ex_${Math.random().toString(36).substring(2, 9)}`,
+            name: String(ex.name || "حرکت تمرینی"),
+            muscleGroup,
+            sets,
+            repetitions,
+            restTime,
+            weight: typeof ex.weight === "string" ? ex.weight : "",
+            customDescription,
+            groupType,
+            pairedMuscleGroup: (groupType === "SUPERSET" || groupType === "TRISET") ? String(ex.pairedMuscleGroup || "") : undefined,
+            pairedExerciseName: (groupType === "SUPERSET" || groupType === "TRISET") ? String(ex.pairedExerciseName || "") : undefined,
+            triMuscleGroup2: groupType === "TRISET" ? String(ex.triMuscleGroup2 || "") : undefined,
+            triExerciseName2: groupType === "TRISET" ? String(ex.triExerciseName2 || "") : undefined,
+          }
+        })
+      : []
+
+    return {
+      id: d.id || `day_${dIdx + 1}`,
+      day: dayKey,
+      label,
+      exercises,
+    }
+  })
+
+  return {
+    routineSummary: summary,
+    workoutDays: normalizedDays,
   }
 }
 
@@ -36,24 +108,32 @@ export async function POST(req: Request) {
       )
     }
 
-    // Check AI Quota (Shared with Diet AI Quota pool)
+    // Check AI Quota and Subscription Status
     const trainer = await prisma.trainer.findUnique({
       where: { id: session.user.id },
-      select: { tier: true, aiQuota: true, aiQuotaResetAt: true }
+      select: { tier: true, aiQuota: true, aiQuotaResetAt: true, expiresAt: true, role: true }
     })
     
     if (!trainer) {
       return NextResponse.json({ error: "حساب کاربری مربی یافت نشد" }, { status: 404 })
     }
+
+    const subStatus = getTrainerSubscriptionState(trainer.expiresAt, trainer.role)
+    if (subStatus.isLocked) {
+      return NextResponse.json({
+        error: "اعتبار اشتراک شما به پایان رسیده است. جهت تولید برنامه با هوش مصنوعی، لطفاً اشتراک خود را در NutriTrain تمدید فرمایید."
+      }, { status: 403 })
+    }
     
     const now = new Date()
     let currentQuota = trainer.aiQuota
+    const defaultTierQuota = TIER_CONFIGS[trainer.tier]?.defaultAiQuota ?? 3
     
-    // Daily quota reset
+    // Quota reset if period passed
     if (!trainer.aiQuotaResetAt || trainer.aiQuotaResetAt < now) {
-      currentQuota = trainer.tier === "PRO" ? 30 : 3;
+      currentQuota = defaultTierQuota
       const nextReset = new Date(now)
-      nextReset.setDate(now.getDate() + 1)
+      nextReset.setDate(now.getDate() + 30)
       nextReset.setHours(0, 0, 0, 0)
       
       await prisma.trainer.update({
@@ -64,7 +144,7 @@ export async function POST(req: Request) {
     
     if (currentQuota <= 0) {
       return NextResponse.json({
-        error: "سهمیه هوش مصنوعی شما برای امروز به پایان رسیده است. لطفاً حساب خود را به نسخه PRO ارتقا دهید یا فردا مراجعه کنید."
+        error: "سهمیه هوش مصنوعی شما در این دوره به پایان رسیده است. لطفاً جهت افزایش سهمیه، اشتراک خود را ارتقا دهید."
       }, { status: 403 })
     }
 
@@ -94,87 +174,24 @@ export async function POST(req: Request) {
       "https://api.gapgpt.ir/v1",
     ]
 
-    // Distinct specialized system prompts tailored per training style
+    // Persona definitions based on trainingStyle
     let specializedPersonaPrompt = ""
-    let styleRulesPrompt = ""
-
     if (trainingStyle === "HOME_WORKOUT") {
-      specializedPersonaPrompt = `شما سرمربی ارشد آمادگی جسمانی و طراحی تمرینات در منزل (Master Home Fitness & Resistance Band Specialist) هستید.
-شما برنامه‌های فوق‌العاده چربی‌سوز، فرم‌دهی عضلانی و تناسب اندام در منزل را با استفاده از تجهیزات خانگی (وزن بدن، کش‌های مقاوتی TPE/پیلاتس/مینی‌لوپ، دمبل خانگی، صندلی و کوله‌پشتی) طراحی می‌کنید.`
-      styleRulesPrompt = `تمرینات باید کاملاً قابل اجرا در محیط خانه (بدون نیاز به دستگاه‌های سنگین باشگاهی) و شامل:
-- حرکات وزن بدن و کش: اسکوات با کش مقاوتی، شنا سوئدی شیب‌دار روی صندلی، لانج معکوس، زیربغل با کش پیلاتس/مینی‌لوپ، دیپ روی صندلی، پل سرینی ایزومتریک (Glute Bridge)، پرس سرشانه با کش و مانتن کلمبر.
-- استفاده هوشمندانه از تکنیک‌های تحت فشار قرار دادن عضله (Time Under Tension)، تنپوی ۳ ثانیه‌ای منفی و مکث ۱ ثانیه‌ای برای جبران نبود وزنه سنگین.
-توضیحات هر حرکت شامل کنترل تنپو، مکث ایزومتریک و حفظ ایمنی مفاصل در خانه باشد.`
+      specializedPersonaPrompt = `شما سرمربی ارشد تمرین در منزل با تخصص تمرین با وزن بدن، دمبل، کش‌های مقاومتی و تجهیزات محدود هستید. حرکات باید با تجهیزات قابل دسترس و فضای معمول منزل قابل اجرا باشند.`
     } else if (trainingStyle === "CROSSFIT") {
-      specializedPersonaPrompt = `شما سرمربی ارشد بین‌المللی کراس‌فیت (CrossFit Level 3 Master Trainer & Head WOD Coach) هستید.
-شما متدولوژی رسمی CrossFit HQ، برنامه‌ریزی WODها، وزنه برداری المپیکی (Olympic Weightlifting) و MetConها را با بالاترین کیفیت طراحی می‌کنید.`
-      styleRulesPrompt = `تمرینات باید شامل ترکیبی از:
-- وزنه برداری المپیکی: Thrusters, Clean & Jerk, Snatch, Wall Balls, Kettlebell Swings, Overhead Squats.
-- ژیمناستیک: Kipping Pull-ups, Muscle-ups, Toes-to-Bar, Box Jumps, Handstand Push-ups, Ring Dips.
-- متابولیک و کاردیو: Double Unders, Burpees Over Bar, Rowing.
-توضیحات هر حرکت شامل نکات ریتم، انفجار لگن و پبسینگ (Pacing) در WOD باشد.`
+      specializedPersonaPrompt = `شما مربی ارشد CrossFit و متخصص طراحی Strength، Conditioning، MetCon و WOD هستید. برنامه باید ترکیبی منطقی از قدرت، توان، ظرفیت هوازی/بی‌هوازی، مهارت و conditioning داشته باشد و از ترکیب تصادفی حرکات جلوگیری شود.`
     } else if (trainingStyle === "CALISTHENICS") {
-      specializedPersonaPrompt = `شما سرمربی ارشد فدراسیون جهانی کالیستنیکس و ورزش‌های وزن بدن (Street Workout & Calisthenics Master Coach) هستید.
-شما برنامه‌های افزایش قدرت نسبی، کنترل کامل وزن بدن و پیشرفت‌های تکنیکی کالیستنیکس را طراحی می‌کنید.`
-      styleRulesPrompt = `تمرینات باید شامل:
-- حرکات وزن بدن پیشرفته: Weighted Pull-ups, Dips, Muscle-ups, Pistol Squats, Handstand Push-ups, L-Sits, Dragon Flags, Ring Push-ups/Dips.
-توضیحات هر حرکت شامل وضعیت Hollow Body، انقباض کتف و کنترل موقعیت مفاصل باشد.`
+      specializedPersonaPrompt = `شما سرمربی کالیستنیکس و متخصص کنترل وزن بدن، relative strength، مهارت‌های حرکتی، ثبات مفاصل و progression هستید. حرکات باید بر اساس سطح واقعی ورزشکار انتخاب شوند و از تجویز مهارت‌های پیشرفته برای فرد نامتناسب جلوگیری شود.`
     } else if (trainingStyle === "SPORT_SPECIFIC") {
-      specializedPersonaPrompt = `شما مدیر تیم قدرتی و آمادگی جسمانی المپیک (NSCA-CSCS Head High-Performance Athletic Coach) هستید.
-شما برنامه‌های بدنسازی مکمل و بیومکانیک اختصاصی رشته‌های ورزشی مختلف را طراحی می‌کنید.`
-      styleRulesPrompt = `تمرینات باید بر اساس بیومکانیک دقیق ورزش اصلی (${primarySport}) شامل:
-- تقویت گروه‌های عضلانی محرک اصلی در ${primarySport}
-- پیشگیری از آسیب‌دیدگی‌های شایع آن ورزش (روتاتور کاف، زانو، همسترینگ، مچ)
-- انتقال نیرو و توان چرخشی/انفجاری (Rotational & Plyometric Core Power).`
+      specializedPersonaPrompt = `شما مدیر ارشد Strength & Conditioning برای ورزشکاران رقابتی هستید و برنامه را بر اساس بیومکانیک، نیازهای انرژی، الگوهای حرکتی، قدرت، توان، سرعت، چابکی، ثبات، mobility و نیازهای رشته ورزشی (${primarySport}) طراحی می‌کنید. تمرین نباید صرفاً یک برنامه بدنسازی عمومی با نام رشته ورزشی باشد.`
     } else {
-      // BODYBUILDING
-      specializedPersonaPrompt = `شما سرمربی ارشد فدراسیون بین‌المللی بدنسازی (IFBB Pro Master Coach) و مدرس علوم هیپرتروفی و بیومکانیک تمرینی هستید.
-شما برنامه‌های افزایش حجم عضلانی، هیپرتروفی علمی و تناسب اندام را طراحی می‌کنید.`
-      styleRulesPrompt = `تمرینات باید شامل:
-- حرکات ترکیبی پایه (Bench Press, Squat, Deadlift, Barbell Row, Overhead Press)
-- حرکات تکمیلی با دمبل، سیم‌کش و دستگاه جهت تفکیک عضلانی کامل
-توضیحات هر حرکت شامل تمرکز بر فاز منفی ۲-۳ ثانیه‌ای، انقباض ۱ ثانیه‌ای و ارتباط ذهن و عضله باشد.`
+      specializedPersonaPrompt = `شما مربی ارشد هایپرتروفی و متخصص Exercise Selection، Volume Management، Intensity، RIR، Tempo و مدیریت خستگی هستید. تمرکز بر تحریک مؤثر عضله، دامنه حرکتی مناسب، progressive overload و مدیریت حجم تمرینی است.`
     }
 
-    // Rules for Fitness Level
-    let levelRules = ""
-    if (fitnessLevel === "مبتدی" || fitnessLevel === "BEGINNER") {
-      levelRules = `سطح ورزشکار: مبتدی (BEGINNER).
-- تعداد حرکات: دقیقاً ۶ تا ۷ حرکت در هر روز تمرینی.
-- حجم و ست‌ها: ۲ تا ۳ ست در هر حرکت.
-- پیچیدگی: حرکات پایه و امن. از روش‌های شدید تخریب عضلانی مثل dropset یا superset سنگین پرهیز شود.
-- زمان استراحت: ۴۵ تا ۶۰ ثانیه برای ریکاوری مناسب.`
-    } else if (fitnessLevel === "پیشرفته" || fitnessLevel === "ADVANCED" || fitnessLevel === "حرفه‌ای" || fitnessLevel === "PRO") {
-      levelRules = `سطح ورزشکار: پیشرفته / حرفه‌ای (ADVANCED/PRO ATHLETE).
-- قانون اجباری تعداد حرکات: در هر روز تمرینی، حتماً باید حداقل ۸ تا ۱۰ حرکت مجزا و تخصصی قرار داده شود. تولید کمتر از ۸ حرکت در هر روز برای سطح حرفه‌ای اکیداً ممنوع و غیرمجاز است!
-- ست‌ها و شدت: ۳ تا ۴ ست در هر حرکت.
-- تکنیک‌های پیشرفته: حتماً حداقل در ۳ حرکت از هر روز از سوپرست (SUPERSET)، دراپ‌ست (DROPSET)، تری‌ست (TRISET) و تنپو (TEMPO) استفاده شود.`
-    } else {
-      // INTERMEDIATE
-      levelRules = `سطح ورزشکار: متوسط (INTERMEDIATE).
-- تعداد حرکات: حتماً ۷ تا ۸ حرکت در هر روز تمرینی.
-- ست‌ها: ۳ تا ۴ ست در هر حرکت.
-- پیشرفت منطقی با حجم تمرینی متوازن و تکنیک استاندارد.`
-    }
-
-    // Rules for Session Duration & Rest Time
     const parsedDuration = parseInt(sessionDurationMinutes) || 60
-    let durationRules = ""
-    if (parsedDuration <= 45) {
-      durationRules = `مدت زمان جلسه تمرینی: ${parsedDuration} دقیقه (جلسه فشرده و کوتاه).
-- قانون اجباری زمان استراحت (restTime): استراحت بین ست‌ها باید دقیقاً ۳۰ تا ۴۵ ثانیه باشد (حداکثر ۶۰ ثانیه فقط برای ۱ حرکت ترکیبی سنگین).
-- استفاده از استراحت ۹۰ ثانیه‌ای برای جلسات ${parsedDuration} دقیقه‌ای اکیداً ممنوع و غیرمجاز است!`
-    } else if (parsedDuration <= 60) {
-      durationRules = `مدت زمان جلسه تمرینی: ${parsedDuration} دقیقه (جلسه استاندارد).
-- قانون اجباری زمان استراحت (restTime): استراحت بین ست‌ها باید ۴۵ تا ۶۰ ثانیه باشد (حداکثر ۷۵ ثانیه برای حرکات سنگین پایه مانند اسکوات و ددلیفت).
-- از دادن استراحت‌های طولانی ناخواسته (مانند ۹۰ ثانیه برای حرکات ایزوله) خودداری کنید.`
-    } else {
-      durationRules = `مدت زمان جلسه تمرینی: ${parsedDuration} دقیقه (جلسه کامل قدرتی).
-- زمان استراحت بین ست‌ها (restTime): ۶۰ تا ۹۰ ثانیه برای حرکات سنگین قدرتی و ۴۵ تا ۶۰ ثانیه برای حرکات تکمیلی و ایزوله.`
-    }
 
     const titlePrefix = trainingStyle === "HOME_WORKOUT"
-      ? "تمرین در منزل و چربی‌سوزی خانگی"
+      ? "تمرین در منزل و هوم‌جیم"
       : trainingStyle === "CROSSFIT"
       ? "کراس‌فیت و WOD"
       : trainingStyle === "CALISTHENICS"
@@ -183,28 +200,97 @@ export async function POST(req: Request) {
       ? "مکمل تخصصی " + primarySport
       : "بدنسازی و هیپرتروفی"
 
-    const systemPrompt = `${specializedPersonaPrompt}
+    const systemPrompt = `شما یک **Elite Sports Performance & Exercise Programming AI** هستید؛ یک سیستم تخصصی طراحی برنامه تمرینی که باید مانند یک مربی ارشد، متخصص فیزیولوژی تمرین، متخصص آمادگی جسمانی و برنامه‌ریز عملکرد ورزشی با تجربه حرفه‌ای عمل کند.
 
-قوانین حیاتی و اجباری خروجی JSON:
-۱. تعداد روزها (workoutDays) باید دقیقاً برابر با ${targetDaysCount} روز باشد (نه کمتر و نه بیشتر).
-۲. ${levelRules}
-۳. ${durationRules}
-۴. ${styleRulesPrompt}
-۵. بخش توضیحات هر حرکت (customDescription) باید فوق‌العاده مختصر، خلاصه و کاربردی (حداکثر ۸ تا ۱۲ کلمه) باشد تا در جداول PDF کاملاً تمیز و یک‌خطی قرار گیرد (مثلاً: "انفجار کامل لگن در بالای حرکت و ریتم مداوم").
-۶. بخش coachNotes صرفاً متن خلاصه دستورالعمل مربی بدون هیچگونه پیشوند مانند "توصیه مربی" یا "دستورالعمل اجرایی" باشد (مثلاً: "گرم کردن پویای مفاصل پیش از تمرین، رعایت فرم صحیح و مدیریت توان").
-۷. دستورالعمل اجباری سوپرست (SUPERSET) و تری‌ست (TRISET):
-- اگر groupType برابر با "SUPERSET" است، حتماً فیلدهای "pairedMuscleGroup" (گروه عضلانی حرکت دوم) و "pairedExerciseName" (عنوان حرکت دوم) مقداردهی شوند.
-- اگر groupType برابر با "TRISET" است، علاوه بر pairedMuscleGroup و pairedExerciseName، فیلدهای "triMuscleGroup2" و "triExerciseName2" نیز مقداردهی شوند.
-۸. پاسخ باید صرفاً یک ساختار JSON معتبر به زبان فارسی باشد.
+وظیفه شما تولید برنامه تمرینی **شخصی‌سازی‌شده، علمی، عملی، قابل اجرا، متناسب با زمان جلسه و متناسب با سطح ورزشکار** است.
+شما نباید صرفاً مجموعه‌ای از حرکات رایج تولید کنید. ابتدا باید اطلاعات ورزشکار، هدف، رشته ورزشی، سبک تمرین، سطح آمادگی، تعداد روزهای تمرین، مدت جلسه و محدودیت‌های ذکرشده را تحلیل کرده و سپس مناسب‌ترین ساختار تمرینی را طراحی کنید.
 
-فرمت دقیق JSON:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۱. سلسله‌مراتب تصمیم‌گیری
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+هنگام طراحی برنامه، این اولویت را رعایت کنید:
+1. ایمنی و محدودیت‌های ذکرشده توسط مربی
+2. هدف اختصاصی برنامه (${fitnessGoal})
+3. نیازهای رشته ورزشی (${primarySport})
+4. سطح آمادگی ورزشکار (${fitnessLevel})
+5. تعداد روزهای تمرین در هفته (${targetDaysCount} روز)
+6. مدت واقعی هر جلسه (${parsedDuration} دقیقه)
+7. هدف عمومی ورزشکار (${clientGoals || "افزایش آمادگی"})
+8. ایجاد تنوع، جذابیت و پایبندی بلندمدت
+
+هرگز برای ایجاد برنامه‌ای ظاهراً حرفه‌ای، ایمنی، قابلیت اجرا یا تناسب با هدف را قربانی تنوع حرکات نکنید.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۲. پرسونای تخصصی سبک تمرین
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${specializedPersonaPrompt}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۳. ساختار هفتگی
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+تعداد روزهای workoutDays باید **دقیقاً برابر با ${targetDaysCount}** باشد (نه کمتر و نه بیشتر).
+از روزهای زیر استفاده کنید:
+["SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"]
+
+روزها را طوری انتخاب و توزیع کنید که عضلات بیش از حد متوالی تحت فشار قرار نگیرند، recovery منطقی وجود داشته باشد و حجم تمرینی هفتگی متناسب با سطح ورزشکار باشد.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۴. انتخاب و ترتیب حرکات
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+حرکات را بر اساس هدف و نیاز ورزشکار انتخاب کنید.
+ترتیب منطقی جلسه:
+1. حرکات مهارتی، انفجاری یا تکنیکی
+2. حرکات چندمفصلی اصلی
+3. حرکات چندمفصلی ثانویه
+4. حرکات کمکی
+5. حرکات ایزوله
+6. Core / conditioning در صورت نیاز
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۵. قوانین تعداد حرکات، ست‌ها و مدت جلسه
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- سطح مبتدی: ۶ تا ۷ حرکت در هر روز، ۲ تا ۳ ست، حرکات پایه، استراحت ۴۵ تا ۶۰ ثانیه.
+- سطح متوسط: ۷ تا ۸ حرکت در هر روز، ۳ تا ۴ ست.
+- سطح پیشرفته / حرفه‌ای: حداقل ۸ و حداکثر ۱۰ حرکت در هر روز، ۳ تا ۴ ست. در صورت لزوم حداکثر ۳ تکنیک پیشرفته (سوپرست، تری‌ست، دراپ‌ست، تمپو).
+کل برنامه باید واقعاً در ${parsedDuration} دقیقه قابل اجرا باشد.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۶. قوانین زمان استراحت (restTime)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+استراحت باید با شدت و ماهیت حرکت هماهنگ باشد:
+- حرکات سنگین و چندمفصلی پایه: ۶۰ تا ۱۲۰ ثانیه
+- حرکات متوسط و کمکی: ۴۵ تا ۹۰ ثانیه
+- حرکات ایزوله یا conditioning: ۳۰ تا ۶۰ ثانیه
+در جلسات فشرده (<= ۴۵ دقیقه)، استراحت‌ها عمدتاً ۳۰ تا ۶۰ ثانیه تنظیم شوند مگر حرکات سنگین که به ریکاوری نیاز دارند.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۷. توضیحات حرکت و Coach Notes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- customDescription باید به زبان فارسی، حداکثر ۸ تا ۱۲ کلمه، کوتاه، کاربردی و حاوی مهم‌ترین نکته اجرایی باشد (مثال: "کنترل کامل فاز منفی و انقباض قوی در نقطه اوج").
+- coachNotes صرفاً حاوی دستورالعمل خلاصه مربی بدون عنوان، بدون "نکته:" و بدون پیشوند باشد.
+- muscleGroup فقط باید یکی از این مقادیر باشد: ["سینه", "پشت", "سرشانه", "بازو", "پا", "ساق پا", "شکم و پهلو", "سایر"]
+- اگر حرکت تک است: groupType = "NORMAL" و فیلدهای pairing خالی باشند.
+- اگر سوپرست است: groupType = "SUPERSET" و فیلدهای pairedMuscleGroup و pairedExerciseName کامل پر شوند.
+- اگر تری‌ست است: groupType = "TRISET" و فیلدهای pairedMuscleGroup، pairedExerciseName، triMuscleGroup2 و triExerciseName2 کامل پر شوند.
+- فیلد weight در صورت نبود اطلاعات کافی خالی باشد ("").
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+۸. کنترل کیفیت داخلی و قوانین خروجی JSON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+قبل از تولید خروجی، بررسی کنید:
+✓ تعداد روزها دقیقاً ${targetDaysCount} است.
+✓ حرکات و ست‌ها در ${parsedDuration} دقیقه قابل اجرا هستند.
+✓ محدودیت‌های notes رعایت شده‌اند.
+✓ خروجی فقط و فقط یک JSON معتبر باشد (بدون Markdown، بدون \`\`\`json و بدون هیچ متن اضافی قبل یا بعد از آن).
+
+فرمت دقیق ساختار JSON:
 {
   "routineSummary": {
     "title": "برنامه حرفه‌ای ${titlePrefix} (${targetDaysCount} روز در هفته)",
-    "description": "توضیح علمی درباره اهداف برنامه و متدولوژی تمرینی استفاده شده.",
+    "description": "توضیح علمی درباره اهداف برنامه و متدولوژی تمرینی.",
     "primarySport": "${primarySport}",
-    "targetMuscleGroups": ["پشت", "سرشانه", "سینه", "پا", "شکم و پهلو"],
-    "coachNotes": "گرم کردن پویای مفاصل، رعایت تکنیک صحیح و تنفس کنترل‌شده."
+    "targetMuscleGroups": ["سینه", "پشت", "سرشانه", "پا"],
+    "coachNotes": "گرم کردن پویای مفاصل پیش از تمرین، رعایت فرم صحیح و مدیریت توان."
   },
   "workoutDays": [
     {
@@ -216,9 +302,9 @@ export async function POST(req: Request) {
           "muscleGroup": "سینه",
           "sets": 4,
           "repetitions": "10-12",
-          "restTime": "45 ثانیه",
+          "restTime": "60 ثانیه",
           "weight": "",
-          "customDescription": "تمرکز بر انقباض سینه و کنترل فاز منفی.",
+          "customDescription": "کنترل کامل فاز منفی و انقباض قوی در نقطه اوج.",
           "groupType": "SUPERSET",
           "pairedMuscleGroup": "پشت",
           "pairedExerciseName": "زیربغل دمبل تک دست"
@@ -228,32 +314,54 @@ export async function POST(req: Request) {
           "muscleGroup": "پا",
           "sets": 4,
           "repetitions": "8-10",
-          "restTime": "60 ثانیه",
+          "restTime": "90 ثانیه",
           "weight": "",
-          "customDescription": "پایین رفتن عمیق و انقباض چهارسر.",
+          "customDescription": "پایین رفتن با کنترل و انقباض قوی در نقطه بازگشت.",
           "groupType": "NORMAL"
         }
       ]
     }
   ]
-}
+}`
 
-روزهای هفته (day) باید از این لیست انتخاب شوند:
-["SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"]
+    const userPrompt = `یک برنامه تمرینی کاملاً شخصی‌سازی‌شده و حرفه‌ای بر اساس اطلاعات زیر طراحی کن.
+اطلاعات را فقط به صورت جداگانه بررسی نکن؛ آن‌ها را به عنوان یک سیستم واحد در نظر بگیر و برنامه‌ای بساز که از نظر هدف، حجم تمرین، انتخاب حرکات، ترتیب حرکات، recovery و زمان جلسه کاملاً با یکدیگر سازگار باشند.
 
-گروه‌های عضلانی (muscleGroup) باید یکی از این مقادیر باشد:
-["سینه", "پشت", "سرشانه", "بازو", "پا", "ساق پا", "شکم و پهلو", "سایر"]`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+اطلاعات ورزشکار
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+نام: ${clientName || "ورزشکار"}
+سن: ${clientAge ? `${clientAge} سال` : "نامشخص"}
+وزن: ${clientWeight ? `${clientWeight} kg` : "نامشخص"}
+قد: ${clientHeight ? `${clientHeight} cm` : "نامشخص"}
+جنسیت: ${clientGender === "FEMALE" ? "خانم" : "آقا"}
+هدف عمومی: ${clientGoals || "افزایش آمادگی جسمانی"}
+ورزش اصلی: ${primarySport}
+سبک تمرین: ${trainingStyle}
+هدف اختصاصی این برنامه: ${fitnessGoal}
+تعداد روزهای تمرین: دقیقاً ${targetDaysCount} روز
+مدت هر جلسه: ${parsedDuration} دقیقه
+سطح آمادگی: ${fitnessLevel}
+توضیحات و محدودیت‌های مربی: ${notes || "بدون محدودیت خاص"}
 
-    const userPrompt = `لطفاً یک برنامه تمرینی کامل فوق‌العاده حرفه‌ای به زبان فارسی تنظیم کنید:
-- مشخصات ورزشکار: ${clientName || "ورزشکار"} (${clientAge ? `${clientAge} سال` : "سن نامشخص"}، ${clientWeight ? `${clientWeight}kg` : ""}، ${clientHeight ? `${clientHeight}cm` : ""}، جنسیت: ${clientGender === "FEMALE" ? "خانم" : "آقا"})
-- هدف عمومی: ${clientGoals || "افزایش آمادگی جسمانی"}
-- ورزش اصلی (Primary Sport): ${primarySport}
-- سبک تمرین: ${trainingStyle}
-- هدف این برنامه: ${fitnessGoal}
-- تعداد روزهای برنامه: دقیقاً ${targetDaysCount} روز
-- مدت جلسه: ${parsedDuration} دقیقه (زمان استراحت‌ها کاملاً منطبق بر این مدت تنظیم شود)
-- سطح آمادگی: ${fitnessLevel} (حتماً حداقل ۸ تا ۱۰ حرکت در هر روز تولید شود)
-- توضیحات مربی: ${notes || "بدون ملاحظات خاص"}`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+دستور طراحی
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+بر اساس تمام اطلاعات بالا، یک برنامه هفتگی منسجم طراحی کن که:
+* دقیقاً ${targetDaysCount} روز تمرینی داشته باشد.
+* با سطح ${fitnessLevel} سازگار باشد.
+* در هر جلسه واقعاً در ${parsedDuration} دقیقه قابل اجرا باشد.
+* مستقیماً برای هدف "${fitnessGoal}" طراحی شده باشد.
+* در صورت وجود primarySport (${primarySport})، نیازهای عملکردی آن ورزش را در برنامه لحاظ کند.
+* محدودیت‌ها و توضیحات مربی را کاملاً رعایت کند.
+* توزیع حجم و recovery در کل هفته منطقی باشد.
+* ترتیب حرکات هدفمند باشد.
+* حرکات تکراری یا کم‌ارزش صرفاً برای پر کردن برنامه استفاده نشوند.
+* برای ورزشکار امکان پیشرفت تدریجی فراهم شود.
+
+در صورت استفاده از SUPERSET، TRI-SET یا سایر روش‌های پیشرفته، pairing و منطق آن‌ها را کامل و معتبر ثبت کن.
+خروجی را دقیقاً مطابق JSON schema تعریف‌شده در System Prompt تولید کن.
+فقط JSON معتبر برگردان. هیچ متن دیگری خارج از JSON ننویس.`
 
     if (apiKey) {
       const isStandardOpenAiModel = selectedModel === "gpt-4o" || selectedModel === "gpt-4o-mini"
@@ -290,7 +398,8 @@ export async function POST(req: Request) {
               const parsed = parseAiJson(content)
               const elapsedMs = Date.now() - startTime
               
-              if (parsed?.workoutDays && Array.isArray(parsed.workoutDays) && parsed.workoutDays.length > 0) {
+              const validated = validateAndNormalizeRoutine(parsed, targetDaysCount)
+              if (validated?.workoutDays && Array.isArray(validated.workoutDays) && validated.workoutDays.length > 0) {
                 // Decrement quota on success
                 await prisma.trainer.update({
                   where: { id: session.user.id },
@@ -298,8 +407,8 @@ export async function POST(req: Request) {
                 })
 
                 return NextResponse.json({
-                  routineSummary: parsed.routineSummary,
-                  workoutDays: parsed.workoutDays,
+                  routineSummary: validated.routineSummary,
+                  workoutDays: validated.workoutDays,
                   isSimulated: false,
                   aiModel: selectedModel || process.env.GAPGPT_MODEL || "gpt-4o",
                   provider: `GapGPT Live API (${baseUrl})`,
