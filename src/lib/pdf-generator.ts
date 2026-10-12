@@ -1,7 +1,7 @@
 import fs from "fs"
 import path from "path"
 import puppeteer from "puppeteer"
-import { acquirePdfPage, releasePdfPage } from "./puppeteer-pool"
+import { acquirePdfPage, releasePdfPage, getExecutablePath, PUPPETEER_VPS_ARGS } from "./puppeteer-pool"
 
 const toPersianDigits = (num: string | number | undefined | null) => {
   if (num === undefined || num === null) return ""
@@ -103,7 +103,7 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
       const exercisesHtml = groupedRows
         .map((row, idx) => {
           const isGrouped = row.exercises.length > 1 || row.groupType !== "NORMAL"
-          const mainEx = row.exercises[0]
+          const mainEx = row.exercises[0] || {}
           const finalRest = row.exercises[row.exercises.length - 1]?.restTime
 
           const cleanedRest = (finalRest || mainEx.restTime || "")
@@ -119,18 +119,18 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
                    .map(
                      (sEx: any, sIdx: number) =>
                        `<div style="font-size: 11px; font-weight: bold; color: #0f172a;">
-                          <span style="color: #065f46;">${toPersianDigits(sIdx + 1)}.</span> ${sEx.name}
+                          <span style="color: #065f46;">${toPersianDigits(sIdx + 1)}.</span> ${sEx.name || "حرکت"}
                         </div>`
                    )
                    .join("")}
                </div>`
             : `<div style="font-weight: bold; color: #0f172a;">
-                 ${mainEx.name}
+                 ${mainEx.name || "حرکت تمرینی"}
                </div>`
 
           const repsHtml = isGrouped
             ? row.exercises.map((e: any) => toPersianDigits(e.repetitions)).join(" + ")
-            : toPersianDigits(mainEx.repetitions)
+            : toPersianDigits(mainEx.repetitions || "10-12")
 
           const notesHtml = toPersianDigits(
             row.exercises
@@ -143,7 +143,7 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
             <tr style="border-bottom: 1px solid #e2e8f0;">
               <td style="text-align: center; font-weight: bold; color: #64748b; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${toPersianDigits(idx + 1)}</td>
               <td style="text-align: right; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${exNameHtml}</td>
-              <td style="text-align: center; font-weight: bold; color: #1e293b; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${toPersianDigits(mainEx.sets)}</td>
+              <td style="text-align: center; font-weight: bold; color: #1e293b; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${toPersianDigits(mainEx.sets || 3)}</td>
               <td style="text-align: center; font-weight: bold; color: #334155; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${repsHtml}</td>
               <td style="text-align: center; font-weight: bold; color: #475569; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${toPersianDigits(cleanedRest)}</td>
               <td style="text-align: right; color: #64748b; padding: 6px 8px;">${notesHtml}</td>
@@ -349,9 +349,11 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
     }
   } catch (poolErr) {
     console.warn("Puppeteer pool fallback activated for routine PDF:", poolErr)
+    const execPath = getExecutablePath()
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      args: PUPPETEER_VPS_ARGS,
+      ...(execPath ? { executablePath: execPath } : {}),
     })
     try {
       const page = await browser.newPage()
@@ -480,9 +482,11 @@ export async function generateDietPdfBuffer(diet: any, client?: any, trainer?: a
     }
   } catch (poolErr) {
     console.warn("Puppeteer pool fallback activated for diet PDF:", poolErr)
+    const execPath = getExecutablePath()
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      args: PUPPETEER_VPS_ARGS,
+      ...(execPath ? { executablePath: execPath } : {}),
     })
     try {
       const page = await browser.newPage()

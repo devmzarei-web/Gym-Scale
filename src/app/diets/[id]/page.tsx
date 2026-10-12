@@ -32,7 +32,7 @@ export default async function DietDetailPage({ params }: DietPageProps) {
   return (
     <div className="space-y-8">
       {/* Back button & Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200 no-print">
         <Link
           href="/diets"
           className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-teal-700 transition-colors"
@@ -41,7 +41,7 @@ export default async function DietDetailPage({ params }: DietPageProps) {
           بازگشت به لیست برنامه‌های تغذیه
         </Link>
 
-        <DietActions dietId={diet.id} />
+        <DietActions dietId={diet.id} clientId={assignedClient?.id} />
       </div>
 
       {/* Diet Card */}

@@ -1,3 +1,4 @@
+import fs from "fs"
 import puppeteer, { Browser, Page } from "puppeteer"
 
 let browserInstance: Browser | null = null
@@ -5,6 +6,36 @@ let launchPromise: Promise<Browser> | null = null
 let idleTimer: NodeJS.Timeout | null = null
 
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000 // Close browser if idle for 10 minutes
+
+export function getExecutablePath(): string | undefined {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH
+  }
+  const candidates = [
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/chromium",
+    "/snap/bin/chromium",
+  ]
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate
+    }
+  }
+  return undefined
+}
+
+export const PUPPETEER_VPS_ARGS = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+  "--disable-gpu",
+  "--no-first-run",
+  "--no-zygote",
+  "--single-process",
+  "--disable-extensions",
+]
 
 async function initBrowser(): Promise<Browser> {
   if (browserInstance && browserInstance.connected) {
@@ -15,10 +46,16 @@ async function initBrowser(): Promise<Browser> {
     return launchPromise
   }
 
-  launchPromise = puppeteer.launch({
+  const execPath = getExecutablePath()
+  const launchOptions: any = {
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-  }).then((browser) => {
+    args: PUPPETEER_VPS_ARGS,
+  }
+  if (execPath) {
+    launchOptions.executablePath = execPath
+  }
+
+  launchPromise = puppeteer.launch(launchOptions).then((browser) => {
     browserInstance = browser
     launchPromise = null
     resetIdleTimer()

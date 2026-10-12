@@ -356,7 +356,7 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
                         <tbody>
                           {groupedRows.map((row, idx) => {
                             const isGrouped = row.exercises.length > 1 || row.groupType !== "NORMAL"
-                            const mainEx = row.exercises[0]
+                            const mainEx = row.exercises[0] || {}
                             const finalRest = row.exercises[row.exercises.length - 1]?.restTime
 
                             // Clean rest time text (replace "بلافاصله (بدون استراحت)" with "بلافاصله")
@@ -385,27 +385,27 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
                                           <span className="font-bold text-emerald-800">
                                             {toPersianDigits(sIdx + 1)}.
                                           </span>
-                                          <span className="font-bold text-slate-900">{subEx.name}</span>
+                                          <span className="font-bold text-slate-900">{subEx.name || "حرکت"}</span>
                                         </div>
                                       ))}
                                     </div>
                                   ) : (
                                     <div className="font-semibold text-slate-900">
-                                      {mainEx.name}
+                                      {mainEx.name || "حرکت تمرینی"}
                                     </div>
                                   )}
                                 </td>
 
                                 {/* 3. Sets */}
                                 <td className="text-center font-bold text-slate-800 border-l border-slate-200">
-                                  {toPersianDigits(mainEx.sets)}
+                                  {toPersianDigits(mainEx.sets || 3)}
                                 </td>
 
                                 {/* 4. Repetitions */}
                                 <td className="text-center font-medium text-slate-700 border-l border-slate-200">
                                   {isGrouped
                                     ? row.exercises.map((e) => toPersianDigits(e.repetitions)).join(" + ")
-                                    : toPersianDigits(mainEx.repetitions)}
+                                    : toPersianDigits(mainEx.repetitions || "10-12")}
                                 </td>
 
                                 {/* 5. Rest Time */}

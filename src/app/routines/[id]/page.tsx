@@ -49,7 +49,7 @@ export default async function RoutineDetailPage({ params }: RoutinePageProps) {
   return (
     <div className="space-y-8">
       {/* Back button & Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200 no-print">
         <Link
           href="/routines"
           className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-emerald-700 transition-colors"
@@ -58,7 +58,7 @@ export default async function RoutineDetailPage({ params }: RoutinePageProps) {
           بازگشت به لیست برنامه‌ها
         </Link>
 
-        <RoutineActions routineId={routine.id} />
+        <RoutineActions routineId={routine.id} clientId={assignedClient?.id} />
       </div>
 
       {/* Routine Title Card */}

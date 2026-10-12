@@ -22,10 +22,14 @@ fi
 mkdir -p logs
 
 echo "📥 1. Pulling latest commits from GitHub..."
+# Discard build-generated PWA service-worker files so git pull never conflicts
+git checkout -- public/sw.js public/workbox-*.js 2>/dev/null || true
 git pull origin main
 
-echo "📦 2. Installing dependencies..."
+echo "📦 2. Installing dependencies and headless Chrome for PDF engine..."
 npm install --production=false
+# Ensure Chromium/Chrome is installed for Puppeteer PDF generator
+npx puppeteer browsers install chrome || true
 
 echo "🔄 3. Synchronizing Prisma database schema..."
 npx prisma generate
