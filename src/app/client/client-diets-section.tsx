@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Utensils, Layers, X, ChevronLeft } from "lucide-react"
+import { Utensils, Layers, X, ChevronLeft, Printer } from "lucide-react"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
 
 interface ClientDietsSectionProps {
@@ -76,13 +76,24 @@ export function ClientDietsSection({ assignedDiets, clientId }: ClientDietsSecti
             </p>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
             <Link
               href={`/client/diets/${activeDiet.id}`}
               className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-3 px-4 rounded-xl transition-all shadow-sm"
             >
               مشاهده کامل برنامه
               <ChevronLeft className="h-4 w-4" />
+            </Link>
+
+            <Link
+              href={`/diets/${activeDiet.id}/pdf?clientId=${clientId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold py-3 px-4 rounded-xl transition-all shadow-2xs"
+              title="مشاهده نسخه چاپی در برگه جدید"
+            >
+              <Printer className="h-4 w-4 text-teal-600" />
+              چاپ و پیش‌نمایش
             </Link>
 
             <DownloadPdfButton

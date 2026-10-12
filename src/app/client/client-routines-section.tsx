@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Dumbbell, Play, Layers, X, ChevronLeft } from "lucide-react"
+import { Dumbbell, Play, Layers, X, ChevronLeft, Printer } from "lucide-react"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
 
 interface ClientRoutinesSectionProps {
@@ -80,13 +80,24 @@ export function ClientRoutinesSection({ assignedRoutines, clientId }: ClientRout
             </p>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
             <Link
               href={`/client/workout/${activeRoutine.id}`}
               className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 px-4 rounded-xl transition-all shadow-xs"
             >
               <Play className="h-4 w-4 fill-white" />
               شروع تمرین زنده
+            </Link>
+
+            <Link
+              href={`/routines/${activeRoutine.id}/pdf?clientId=${clientId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold py-3 px-4 rounded-xl transition-all shadow-2xs"
+              title="مشاهده نسخه استاندارد چاپی در برگه جدید"
+            >
+              <Printer className="h-4 w-4 text-emerald-600" />
+              چاپ و پیش‌نمایش
             </Link>
 
             <DownloadPdfButton

@@ -25,17 +25,20 @@ export function DietActions({ dietId, clientId }: { dietId: string; clientId?: s
         : `/api/diets/${dietId}/pdf`
 
       const res = await fetch(urlPath)
-      if (!res.ok) {
-        const errorText = await res.text().catch(() => "")
-        console.warn("Direct Diet PDF download API error:", errorText)
+      const contentType = res.headers.get("Content-Type") || ""
+
+      if (res.redirected || contentType.includes("text/html")) {
         toast.dismiss(toastId)
-        toast.info(
-          "تولید فایل در پس‌زمینه سرور با محدودیت مواجه شد؛ صفحه اختصاصی چاپ برای شما باز می‌شود تا مستقیماً فایل PDF را ذخیره کنید.",
-          { duration: 6000 }
-        )
-        window.open(printUrl, "_blank")
+        toast.info("در حال انتقال به صفحه چاپ و ذخیره مستقیم PDF...", { duration: 4000 })
+        const targetUrl = res.url || (printUrl.includes("?") ? `${printUrl}&autoPrint=true` : `${printUrl}?autoPrint=true`)
+        window.location.href = targetUrl
         return
       }
+
+      if (!res.ok) {
+        throw new Error("خطا در پاسخ سرور")
+      }
+
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -50,10 +53,13 @@ export function DietActions({ dietId, clientId }: { dietId: string; clientId?: s
     } catch (err: any) {
       toast.dismiss(toastId)
       toast.info(
-        "ارتباط با موتور دانلود سرور برقرار نشد؛ صفحه اختصاصی چاپ برای دانلود و ذخیره مستقیم PDF باز شد.",
-        { duration: 6000 }
+        "دانلود خودکار با محدودیت مواجه شد؛ در حال هدایت به صفحه چاپ و ذخیره مستقیم PDF...",
+        { duration: 4500 }
       )
-      window.open(printUrl, "_blank")
+      const fallbackUrl = printUrl.includes("?")
+        ? `${printUrl}&autoPrint=true&error=server_engine_fallback`
+        : `${printUrl}?autoPrint=true&error=server_engine_fallback`
+      window.location.href = fallbackUrl
     } finally {
       setDownloading(false)
     }

@@ -6,11 +6,11 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    const { searchParams } = new URL(request.url)
-    const clientId = searchParams.get("clientId")
+  const { id } = await params
+  const { searchParams } = new URL(request.url)
+  const clientId = searchParams.get("clientId")
 
+  try {
     const diet = await prisma.dietPlan.findUnique({
       where: { id },
       include: {
@@ -45,7 +45,15 @@ export async function GET(
       },
     })
   } catch (error: any) {
-    console.error("Error generating diet PDF with Puppeteer:", error)
-    return new NextResponse(`خطا در تولید فایل PDF: ${error?.message || error}`, { status: 500 })
+    console.error("Error generating diet PDF with Puppeteer, falling back to client printable route:", error)
+    
+    // Fail-Safe Fallback: Return HTTP 307 temporary redirect to printable preview with autoPrint
+    // Completely bypasses popup blockers and guarantees direct document view/print.
+    const fallbackUrl = new URL(`/diets/${id}/pdf`, request.url)
+    if (clientId) fallbackUrl.searchParams.set("clientId", clientId)
+    fallbackUrl.searchParams.set("autoPrint", "true")
+    fallbackUrl.searchParams.set("error", "server_engine_fallback")
+
+    return NextResponse.redirect(fallbackUrl, 307)
   }
 }

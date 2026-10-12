@@ -136,11 +136,29 @@ export function Navbar() {
           <NavbarUserDropdown />
 
           <button
-            onClick={() => setMobileOpen(true)}
-            className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border border-slate-200"
-            aria-label="باز کردن منوی ناوبری"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="lg:hidden relative p-2 rounded-2xl text-slate-700 hover:text-slate-950 hover:bg-slate-100 active:scale-95 transition-all border border-slate-200 flex flex-col items-center justify-center w-10 h-10 gap-1.25 overflow-hidden"
+            aria-label={mobileOpen ? "بستن منو" : "باز کردن منوی ناوبری"}
+            aria-expanded={mobileOpen}
           >
-            <Menu className="h-5 w-5" />
+            <span
+              className={cn(
+                "w-5 h-0.5 bg-slate-800 rounded-full transition-all duration-300 ease-in-out transform origin-center",
+                mobileOpen ? "rotate-45 translate-y-[7px] bg-emerald-600" : ""
+              )}
+            />
+            <span
+              className={cn(
+                "w-5 h-0.5 bg-slate-800 rounded-full transition-all duration-200 ease-in-out",
+                mobileOpen ? "opacity-0 scale-x-0" : "opacity-100 scale-x-100"
+              )}
+            />
+            <span
+              className={cn(
+                "w-5 h-0.5 bg-slate-800 rounded-full transition-all duration-300 ease-in-out transform origin-center",
+                mobileOpen ? "-rotate-45 -translate-y-[7px] bg-emerald-600" : ""
+              )}
+            />
           </button>
         </div>
       </div>

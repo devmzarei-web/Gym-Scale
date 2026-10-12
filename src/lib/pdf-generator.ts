@@ -2,12 +2,12 @@ import fs from "fs"
 import path from "path"
 import puppeteer, { Browser } from "puppeteer"
 import { acquirePdfPage, releasePdfPage, getExecutablePath, PUPPETEER_VPS_ARGS } from "./puppeteer-pool"
-
-const toPersianDigits = (num: string | number | undefined | null) => {
-  if (num === undefined || num === null) return ""
-  const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"]
-  return num.toString().replace(/\d/g, (x) => persianDigits[parseInt(x)])
-}
+import {
+  toPersianDigits,
+  normalizeSportContext,
+  normalizeWorkoutDays,
+  normalizeTrainerBranding,
+} from "./pdf-normalize"
 
 function getAssetDataUri(assetPathOrUrl: string | null | undefined, defaultMime = "image/png"): string {
   if (!assetPathOrUrl) return ""
@@ -90,14 +90,14 @@ function getGroupedRowsForDay(rawExercises: any[]): GroupedRow[] {
 }
 
 export async function generateRoutinePdfBuffer(routine: any, client?: any, trainer?: any): Promise<Buffer> {
-  const trainerData = trainer || routine.trainer
-  const trainerLogo = getAssetDataUri(trainerData?.logoUrl)
+  const trainerData = normalizeTrainerBranding(trainer || routine.trainer)
+  const trainerLogo = getAssetDataUri(trainerData.logoUrl)
   const logoBase64 = getAssetDataUri("NutriTrain.png", "image/png")
   const vazirRegBase64 = getAssetDataUri("fonts/Vazirmatn-Regular.woff2", "font/woff2")
   const vazirBoldBase64 = getAssetDataUri("fonts/Vazirmatn-Bold.woff2", "font/woff2")
   const morabbaMedBase64 = getAssetDataUri("fonts/Morabba-Medium.woff2", "font/woff2")
 
-  const trainerName = trainerData?.name || "مربی تخصصی NutriTrain"
+  const trainerName = trainerData.name
 
   const groupBadgesMap: Record<string, string> = {
     SUPERSET: "سوپرست",
@@ -108,7 +108,9 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
     TEMPO: "تمپو",
   }
 
-  const workoutDaysHtml = routine.workoutDays
+  const normalizedDays = normalizeWorkoutDays(routine.workoutDays)
+
+  const workoutDaysHtml = normalizedDays
     .map((day: any, dayIdx: number) => {
       const groupedRows = getGroupedRowsForDay(day.exercises)
 
@@ -320,15 +322,12 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
       <div class="gold-line"></div>
 
       ${(() => {
-        const sportCtx = routine.sportContext as any || (routine.description ? { description: routine.description } : null)
+        const sportCtx = normalizeSportContext(routine.sportContext, routine.description)
         const sportName = sportCtx?.primarySport || client?.primarySport
 
         if (!sportCtx && !sportName) return ""
 
-        const rawCoachNotes = String(sportCtx?.coachNotes || "")
-          .replace(/^(دستورالعمل اجرایی مربی|دستورالعمل اجرایی|دستورالعمل اجرا|توصیه مربی)\s*[:：]\s*/gi, "")
-          .replace(/^(توصیه مربی|دستورالعمل اجرایی|دستورالعمل اجرا)\s*[:：]\s*/gi, "")
-          .trim()
+        const rawCoachNotes = sportCtx?.coachNotes || ""
 
         return `
           <div style="background-color: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; font-size: 10.5px;">
@@ -399,14 +398,14 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
 }
 
 export async function generateDietPdfBuffer(diet: any, client?: any, trainer?: any): Promise<Buffer> {
-  const trainerData = trainer || diet.trainer
-  const trainerLogo = getAssetDataUri(trainerData?.logoUrl)
+  const trainerData = normalizeTrainerBranding(trainer || diet.trainer)
+  const trainerLogo = getAssetDataUri(trainerData.logoUrl)
   const logoBase64 = getAssetDataUri("NutriTrain.png", "image/png")
   const vazirRegBase64 = getAssetDataUri("fonts/Vazirmatn-Regular.woff2", "font/woff2")
   const vazirBoldBase64 = getAssetDataUri("fonts/Vazirmatn-Bold.woff2", "font/woff2")
   const morabbaMedBase64 = getAssetDataUri("fonts/Morabba-Medium.woff2", "font/woff2")
 
-  const trainerName = trainerData?.name || "مربی تخصصی NutriTrain"
+  const trainerName = trainerData.name
 
   const html = `
     <!DOCTYPE html>

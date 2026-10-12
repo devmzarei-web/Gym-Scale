@@ -3,6 +3,7 @@ import fs from "fs"
 import path from "path"
 import prisma from "@/lib/prisma"
 import { PrintButton } from "@/components/print-button"
+import { AutoPrintTrigger } from "@/components/auto-print-trigger"
 
 export const revalidate = 0
 
@@ -45,10 +46,9 @@ function getAssetDataUri(assetPathOrUrl: string | null | undefined, defaultMime 
   }
 }
 
-
 interface PageProps {
   params: Promise<{ id: string }>
-  searchParams?: Promise<{ clientId?: string }>
+  searchParams?: Promise<{ clientId?: string; autoPrint?: string; error?: string }>
 }
 
 export default async function DietPdfPage({ params, searchParams }: PageProps) {
@@ -233,6 +233,14 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
           <PrintButton fileName={pdfFileName} />
         </div>
       </div>
+
+      {search?.error === "server_engine_fallback" && (
+        <div className="no-print max-w-4xl mx-auto mt-4 mx-4 p-3 rounded-2xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold text-center flex items-center justify-center gap-2 shadow-xs">
+          <span>✨ نسخه استاندارد چاپی لود شد. پنجره چاپ/ذخیره PDF آماده فراخوانی است.</span>
+        </div>
+      )}
+
+      {search?.autoPrint === "true" && <AutoPrintTrigger delay={500} />}
 
       <div className="w-full bg-white">
         <div className="max-w-[190mm] mx-auto py-8 px-4 pdf-body">

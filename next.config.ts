@@ -1,10 +1,27 @@
 import type { NextConfig } from "next";
-import withPWAInit from "@ducanh2912/next-pwa";
+import withPWAInit, { runtimeCaching } from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
   register: true,
+  workboxOptions: {
+    disableDevLogs: true,
+    runtimeCaching: [
+      {
+        // Dynamic authenticated API calls must never fall back to stale or empty caches
+        urlPattern: /\/api\/(?!auth).*/i,
+        handler: "NetworkOnly",
+        method: "GET",
+      },
+      {
+        // Dynamic SSR pages: ensure direct network fetch and eliminate Workbox promise rejections
+        urlPattern: /\/(clients|routines|diets|messages|profile|exercises|food-bank|recipes|admin)(\/.*)?$/i,
+        handler: "NetworkOnly",
+      },
+      ...runtimeCaching,
+    ],
+  },
 });
 
 const nextConfig: NextConfig = {

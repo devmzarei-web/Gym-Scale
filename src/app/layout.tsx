@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
+import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { SubscriptionWarningBanner } from "@/components/subscription-warning-banner"
 import { Providers } from "@/components/providers"
 import { Toaster } from "sonner"
@@ -21,9 +22,10 @@ export default function RootLayout({
         <Providers>
           <SubscriptionWarningBanner />
           <Navbar />
-          <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-24 lg:pb-8">
             {children}
           </main>
+          <MobileBottomNav />
           <Toaster
             position="top-center"
             dir="rtl"

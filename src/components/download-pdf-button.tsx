@@ -24,12 +24,23 @@ export function DownloadPdfButton({
   async function handleDownload(e: React.MouseEvent) {
     e.preventDefault()
     setDownloading(true)
-    const toastId = toast.loading("در حال آماده‌سازی و دانلود فایل PDF...")
+    const toastId = toast.loading("در حال آماده‌سازی و دریافت فایل PDF...")
 
     try {
       const res = await fetch(url)
+      
+      const contentType = res.headers.get("Content-Type") || ""
+      // If server redirected to printable preview (e.g. 307 fallback), navigate directly
+      if (res.redirected || contentType.includes("text/html")) {
+        toast.dismiss(toastId)
+        toast.info("در حال انتقال به صفحه چاپ و ذخیره مستقیم PDF...", { duration: 4000 })
+        const targetUrl = res.url || (previewUrl.includes("?") ? `${previewUrl}&autoPrint=true` : `${previewUrl}?autoPrint=true`)
+        window.location.href = targetUrl
+        return
+      }
+
       if (!res.ok) {
-        throw new Error("خطا در تولید فایل توسط سرور")
+        throw new Error("خطا در پاسخ سرور")
       }
 
       const contentDisposition = res.headers.get("Content-Disposition")
@@ -56,10 +67,14 @@ export function DownloadPdfButton({
     } catch (err: any) {
       toast.dismiss(toastId)
       toast.info(
-        "دانلود مستقیم موقتاً با محدودیت سرور مواجه شد؛ صفحه اختصاصی چاپ برای شما باز شد تا مستقیماً فایل PDF را ذخیره کنید.",
-        { duration: 6000 }
+        "دانلود خودکار با محدودیت مواجه شد؛ در حال هدایت به صفحه چاپ و ذخیره مستقیم PDF...",
+        { duration: 4500 }
       )
-      window.open(previewUrl, "_blank")
+      // Navigate current tab to preview with auto-print — zero popup blocker traps!
+      const fallbackUrl = previewUrl.includes("?")
+        ? `${previewUrl}&autoPrint=true&error=server_engine_fallback`
+        : `${previewUrl}?autoPrint=true&error=server_engine_fallback`
+      window.location.href = fallbackUrl
     } finally {
       setDownloading(false)
     }
@@ -70,7 +85,7 @@ export function DownloadPdfButton({
       onClick={handleDownload}
       disabled={downloading}
       className={className}
-      title="دانلود مستقیم فایل PDF یا باز کردن صفحه استاندارد چاپی"
+      title="دانلود مستقیم فایل PDF یا ذخیره مستقیم از صفحه استاندارد چاپی"
     >
       {downloading ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />

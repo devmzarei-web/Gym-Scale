@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Phone, Mail, Dumbbell, Utensils, Calendar, Plus, ArrowRight, Clock } from "lucide-react"
+import { Phone, Mail, Dumbbell, Utensils, Calendar, Plus, ArrowRight, Clock, Printer } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
 import { SubscriptionModal } from "./subscription-modal"
@@ -126,10 +126,10 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
   return (
     <div className="space-y-8">
       {/* Back button & Header Actions */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
         <Link
           href="/clients"
-          className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-emerald-700 transition-colors"
+          className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-emerald-700 transition-colors py-1"
         >
           <ArrowRight className="h-4 w-4" />
           بازگشت به لیست شاگردان
@@ -139,26 +139,26 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
       </div>
 
       {/* Client Overview Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200 p-6 md:p-8 shadow-xs space-y-6">
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200 p-5 sm:p-6 md:p-8 shadow-xs space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-extrabold text-2xl shadow-xs">
+            <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-extrabold text-xl sm:text-2xl shadow-xs shrink-0">
               {client.name.charAt(0)}
             </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-extrabold text-slate-900 font-heading">{client.name}</h1>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-heading truncate">{client.name}</h1>
                 {activeSub ? (
-                  <span className="text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                  <span className="text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full shrink-0">
                     اشتراک فعال
                   </span>
                 ) : (
-                  <span className="text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full">
-                    اشتراک منقضی شده / نیازمند تمدید
+                  <span className="text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full shrink-0">
+                    اشتراک منقضی شده
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 mt-1">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-500 mt-1.5">
                 {client.phone && (
                   <span className="flex items-center gap-1">
                     <Phone className="h-3.5 w-3.5 text-slate-400" />
@@ -273,13 +273,23 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                       <p className="text-xs text-slate-600">{routine.description}</p>
                     )}
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Link
                           href={`/routines/${routine.id}`}
                           className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 bg-white border border-slate-200 px-3 py-2 rounded-xl transition-all"
                         >
                           مشاهده جزئیات
                           <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                        </Link>
+                        <Link
+                          href={`/routines/${routine.id}/pdf?clientId=${client.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold text-emerald-800 hover:text-emerald-900 flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-2 rounded-xl transition-all shadow-2xs"
+                          title="مشاهده نسخه استاندارد چاپی و دانلود مستقیم در برگه جدید"
+                        >
+                          <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>چاپ و پیش‌نمایش</span>
                         </Link>
                         <DownloadPdfButton
                           url={`/api/routines/${routine.id}/pdf?clientId=${client.id}`}
@@ -341,13 +351,23 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                       <p className="text-xs text-slate-600">{diet.description}</p>
                     )}
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Link
                           href={`/diets/${diet.id}`}
                           className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 bg-white border border-slate-200 px-3 py-2 rounded-xl transition-all"
                         >
                           مشاهده جزئیات
                           <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                        </Link>
+                        <Link
+                          href={`/diets/${diet.id}/pdf?clientId=${client.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold text-teal-800 hover:text-teal-900 flex items-center gap-1.5 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-2 rounded-xl transition-all shadow-2xs"
+                          title="مشاهده نسخه استاندارد چاپی و دانلود مستقیم در برگه جدید"
+                        >
+                          <Printer className="h-3.5 w-3.5 text-teal-600" />
+                          <span>چاپ و پیش‌نمایش</span>
                         </Link>
                         <DownloadPdfButton
                           url={`/api/diets/${diet.id}/pdf?clientId=${client.id}`}
