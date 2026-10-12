@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { X } from "lucide-react"
+import { X, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface MobileNavDrawerProps {
@@ -119,6 +119,22 @@ export function MobileNavDrawer({
               </Link>
             )
           })}
+
+          <div className="pt-2 border-t border-slate-100 mt-2">
+            <Link
+              href="/profile"
+              onClick={onClose}
+              className={cn(
+                "flex items-center gap-3 px-3.5 py-2.5 text-xs font-bold rounded-2xl transition-all whitespace-nowrap",
+                pathname === "/profile"
+                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-xs"
+                  : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              )}
+            >
+              <User className={cn("h-4 w-4 shrink-0", pathname === "/profile" ? "text-emerald-600" : "text-slate-400")} />
+              <span>پروفایل و لوگوی مربی</span>
+            </Link>
+          </div>
         </div>
 
         {/* Drawer Footer info */}

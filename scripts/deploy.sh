@@ -22,8 +22,8 @@ fi
 mkdir -p logs
 
 echo "📥 1. Pulling latest commits from GitHub..."
-# Discard build-generated PWA service-worker files so git pull never conflicts
-git checkout -- public/sw.js public/workbox-*.js 2>/dev/null || true
+# Discard build-generated files or script changes so git pull never conflicts
+git checkout -- scripts/deploy.sh public/sw.js public/workbox-*.js 2>/dev/null || true
 git pull origin main
 
 echo "📦 2. Installing dependencies and headless Chrome for PDF engine..."
