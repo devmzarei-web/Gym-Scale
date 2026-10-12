@@ -19,7 +19,10 @@ import {
   HelpCircle,
   Eye,
   EyeOff,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react"
+import { toast } from "sonner"
 
 const SECURITY_QUESTIONS = [
   "نام اولین حیوان خانگی شما چیست؟",
@@ -44,6 +47,8 @@ export default function ProfilePage() {
 
   // Trainer specific
   const [bio, setBio] = useState("")
+  const [logoUrl, setLogoUrl] = useState("")
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   // Client specific
   const [age, setAge] = useState<number | "">("")
@@ -79,6 +84,7 @@ export default function ProfilePage() {
         setPhone(u.phone || "")
         setRole(u.role || "")
         setBio(u.bio || "")
+        setLogoUrl(u.logoUrl || "")
         setAge(u.age || "")
         setWeight(u.weight || "")
         setHeight(u.height || "")
@@ -97,6 +103,26 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("folder", "logos")
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "خطا در آپلود لوگو")
+      setLogoUrl(data.url)
+      toast.success("لوگو با موفقیت بارگذاری شد. جهت ثبت دائم، دکمه ذخیره تغییرات را بزنید.")
+    } catch (err: any) {
+      toast.error(err.message || "خطا در آپلود لوگو")
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -110,6 +136,7 @@ export default function ProfilePage() {
           name,
           phone,
           bio,
+          logoUrl,
           age: age !== "" ? Number(age) : undefined,
           weight: weight !== "" ? Number(weight) : undefined,
           height: height !== "" ? Number(height) : undefined,
@@ -236,16 +263,70 @@ export default function ProfilePage() {
             </div>
 
             {role === "TRAINER" && (
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">بیوگرافی و سوابق مربیگری</label>
-                <textarea
-                  rows={3}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="درباره سوابق، مدرک مربیگری و تخصص خود بنویسید..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-emerald-600"
-                />
-              </div>
+              <>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">بیوگرافی و سوابق مربیگری</label>
+                  <textarea
+                    rows={3}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="درباره سوابق، مدرک مربیگری و تخصص خود بنویسید..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 p-5 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-900">
+                        لوگوی اختصاصی مربی یا باشگاه (درج در سربرگ PDF برنامه‌ها)
+                      </label>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        این تصویر با وضوح بالا در سربرگ تمام فایل‌های PDF تمرین و تغذیه تولیدی قرار می‌گیرد.
+                      </p>
+                    </div>
+                    {logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setLogoUrl("")}
+                        className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg border border-rose-200 transition-colors"
+                      >
+                        حذف لوگو
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="h-20 w-36 rounded-xl border border-slate-200 bg-white flex items-center justify-center p-2 overflow-hidden shadow-2xs shrink-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="لوگوی مربی" className="h-full w-full object-contain" />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-slate-400 text-center">
+                          <ImageIcon className="h-6 w-6 stroke-1 mb-1 text-slate-300" />
+                          <span className="text-[10px]">لوگوی پیش‌فرض</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5 flex-1">
+                      <label className="cursor-pointer inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-300 shadow-2xs transition-all">
+                        {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin text-emerald-600" /> : <Upload className="h-4 w-4 text-emerald-600" />}
+                        <span>{uploadingLogo ? "در حال آپلود..." : "انتخاب و آپلود تصویر لوگو"}</span>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                          onChange={handleLogoUpload}
+                          disabled={uploadingLogo}
+                          className="hidden"
+                        />
+                      </label>
+                      <p className="text-[10px] text-slate-500">
+                        فرمت‌های مجاز: PNG، JPG، WEBP یا SVG (پیشنهاد: تصویر با پس‌زمینه شفاف Transparent).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>

@@ -12,15 +12,26 @@ const toPersianDigits = (num: string | number | undefined | null) => {
   return num.toString().replace(/\d/g, (x) => persianDigits[parseInt(x)])
 }
 
-function getBase64Asset(assetPath: string, mimeType: string) {
+function getAssetDataUri(assetPathOrUrl: string | null | undefined, defaultMime = "image/png"): string {
+  if (!assetPathOrUrl) return ""
+  if (assetPathOrUrl.startsWith("data:")) return assetPathOrUrl
   try {
-    const fullPath = path.join(process.cwd(), "public", assetPath)
+    const cleanPath = assetPathOrUrl.replace(/^[/\\]+/, "")
+    const fullPath = path.join(process.cwd(), "public", cleanPath)
+    if (!fs.existsSync(fullPath)) return ""
     const fileBuffer = fs.readFileSync(fullPath)
-    return `data:${mimeType};base64,${fileBuffer.toString("base64")}`
+    const ext = path.extname(cleanPath).toLowerCase()
+    let mime = defaultMime
+    if (ext === ".svg") mime = "image/svg+xml"
+    else if (ext === ".webp") mime = "image/webp"
+    else if (ext === ".jpg" || ext === ".jpeg") mime = "image/jpeg"
+    else if (ext === ".png") mime = "image/png"
+    return `data:${mime};base64,${fileBuffer.toString("base64")}`
   } catch (e) {
     return ""
   }
 }
+
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -152,10 +163,12 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
   if (currentPage.length > 0) pages.push(currentPage)
   if (pages.length === 0) pages.push([])
 
-  const logoBase64 = getBase64Asset("NutriTrain.png", "image/png")
-  const vazirRegBase64 = getBase64Asset("fonts/Vazirmatn-Regular.woff2", "font/woff2")
-  const vazirBoldBase64 = getBase64Asset("fonts/Vazirmatn-Bold.woff2", "font/woff2")
-  const morabbaMedBase64 = getBase64Asset("fonts/Morabba-Medium.woff2", "font/woff2")
+  const trainer = routine.trainer
+  const trainerLogo = getAssetDataUri(trainer?.logoUrl)
+  const logoBase64 = getAssetDataUri("NutriTrain.png", "image/png")
+  const vazirRegBase64 = getAssetDataUri("fonts/Vazirmatn-Regular.woff2", "font/woff2")
+  const vazirBoldBase64 = getAssetDataUri("fonts/Vazirmatn-Bold.woff2", "font/woff2")
+  const morabbaMedBase64 = getAssetDataUri("fonts/Morabba-Medium.woff2", "font/woff2")
 
   const groupBadgesMap: Record<string, string> = {
     SUPERSET: "سوپرست",
@@ -254,7 +267,13 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
               {/* Right Side (RTL Right): Logo + Trainer Info */}
               <div className="flex flex-col gap-2 text-right">
                 <div className="flex items-center gap-3">
-                  {logoBase64 ? (
+                  {trainerLogo ? (
+                    <img
+                      src={trainerLogo}
+                      alt={trainer?.name || "لوگوی مربی"}
+                      className="max-h-12 max-w-[140px] object-contain rounded-md"
+                    />
+                  ) : logoBase64 ? (
                     <img src={logoBase64} alt="NutriTrain Logo" className="w-36 h-10 object-contain" />
                   ) : (
                     <h2 className="text-xl font-black text-emerald-800 pdf-header-text">NutriTrain</h2>
@@ -262,10 +281,10 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
 
                   <div className="flex flex-col text-right pr-3 border-r-2 border-emerald-600/40">
                     <span className="text-sm font-extrabold text-slate-900 leading-tight pdf-header-text whitespace-nowrap">
-                      {trainerName}
+                      {routine.trainer?.name || "مربی"}
                     </span>
                     <span className="text-[9px] font-bold text-emerald-700 mt-0.5 tracking-wide pdf-body whitespace-nowrap">
-                      مربی رسمی فدراسیون بدنسازی و پرورش اندام
+                      {trainer?.bio ? toPersianDigits(trainer.bio) : "مربی رسمی فدراسیون بدنسازی و پرورش اندام"}
                     </span>
                   </div>
                 </div>
@@ -277,9 +296,15 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
                   {toPersianDigits(routine.title)}
                 </h1>
 
-                <span className="text-[10px] font-bold text-slate-500 pdf-body whitespace-nowrap">
-                  تاریخ صدور: {toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(routine.createdAt)))}
-                </span>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 pdf-body whitespace-nowrap">
+                  <span>تاریخ صدور: {toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(routine.createdAt)))}</span>
+                  {trainerLogo && logoBase64 && (
+                    <>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-emerald-700 font-semibold">سامانه NutriTrain</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -334,23 +359,23 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
                     </div>
 
                     {groupedRows.length > 0 ? (
-                      <table className="w-full day-table border-collapse" style={{ tableLayout: "fixed" }}>
+                      <table className="w-full day-table border-collapse" style={{ tableLayout: "auto" }}>
                         <colgroup>
-                          <col style={{ width: "5%" }} />
-                          <col style={{ width: "48%" }} />
-                          <col style={{ width: "8%" }} />
-                          <col style={{ width: "12%" }} />
-                          <col style={{ width: "13%" }} />
-                          <col style={{ width: "14%" }} />
+                          <col style={{ width: "36px" }} />
+                          <col style={{ width: "28%" }} />
+                          <col style={{ width: "46px" }} />
+                          <col style={{ width: "70px" }} />
+                          <col style={{ width: "76px" }} />
+                          <col style={{ width: "auto" }} />
                         </colgroup>
                         <thead>
                           <tr className="bg-slate-100 border-b border-slate-300">
-                            <th className="font-bold text-center text-slate-600">ردیف</th>
+                            <th className="font-bold text-center text-slate-700 whitespace-nowrap">#</th>
                             <th className="font-bold text-right text-slate-800">نام حرکت</th>
-                            <th className="font-bold text-center text-slate-600">ست</th>
-                            <th className="font-bold text-center text-slate-600">تکرار</th>
-                            <th className="font-bold text-center text-slate-600">استراحت</th>
-                            <th className="font-bold text-right text-slate-600">توضیحات</th>
+                            <th className="font-bold text-center text-slate-700 whitespace-nowrap">ست</th>
+                            <th className="font-bold text-center text-slate-700 whitespace-nowrap">تکرار</th>
+                            <th className="font-bold text-center text-slate-700 whitespace-nowrap">استراحت</th>
+                            <th className="font-bold text-right text-slate-700">توضیحات و نکات اجرایی</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -365,14 +390,19 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
                               .replace(/بدون استراحت/g, "بلافاصله")
 
                             return (
-                              <tr key={row.id} className="border-b border-slate-200 last:border-b-0">
-                                {/* 1. Row Index Number (Counts as 1 row for the entire superset/triset) */}
-                                <td className="text-center font-bold text-slate-500 border-l border-slate-200">
+                              <tr
+                                key={row.id}
+                                className={`border-b border-slate-200 last:border-b-0 ${
+                                  idx % 2 === 1 ? "bg-slate-50/60" : "bg-white"
+                                }`}
+                              >
+                                {/* 1. Row Index Number */}
+                                <td className="text-center font-bold text-slate-500 border-l border-slate-200 whitespace-nowrap px-1">
                                   {toPersianDigits(idx + 1)}
                                 </td>
 
-                                {/* 2. Exercise Name Cell (Grouped stacked if superset/triset) */}
-                                <td className="text-right border-l border-slate-200 py-2">
+                                {/* 2. Exercise Name Cell */}
+                                <td className="text-right border-l border-slate-200 py-2 px-2">
                                   {isGrouped ? (
                                     <div className="space-y-1">
                                       <div className="flex items-center gap-1.5 mb-1">
@@ -397,24 +427,24 @@ export default async function RoutinePdfPage({ params, searchParams }: PageProps
                                 </td>
 
                                 {/* 3. Sets */}
-                                <td className="text-center font-bold text-slate-800 border-l border-slate-200">
+                                <td className="text-center font-bold text-slate-800 border-l border-slate-200 whitespace-nowrap px-1">
                                   {toPersianDigits(mainEx.sets || 3)}
                                 </td>
 
                                 {/* 4. Repetitions */}
-                                <td className="text-center font-medium text-slate-700 border-l border-slate-200">
+                                <td className="text-center font-semibold text-slate-700 border-l border-slate-200 whitespace-nowrap px-1">
                                   {isGrouped
                                     ? row.exercises.map((e) => toPersianDigits(e.repetitions)).join(" + ")
                                     : toPersianDigits(mainEx.repetitions || "10-12")}
                                 </td>
 
                                 {/* 5. Rest Time */}
-                                <td className="text-center text-slate-600 border-l border-slate-200 font-semibold">
+                                <td className="text-center text-slate-600 border-l border-slate-200 font-semibold whitespace-nowrap px-1">
                                   {toPersianDigits(cleanedRest)}
                                 </td>
 
                                 {/* 6. Custom Notes */}
-                                <td className="text-right text-slate-500">
+                                <td className="text-right text-slate-600 text-[10.5px] leading-relaxed py-1.5 px-2">
                                   {toPersianDigits(
                                     row.exercises
                                       .map((e) => e.customDescription)

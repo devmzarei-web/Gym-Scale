@@ -1,6 +1,6 @@
 import fs from "fs"
 import path from "path"
-import puppeteer from "puppeteer"
+import puppeteer, { Browser } from "puppeteer"
 import { acquirePdfPage, releasePdfPage, getExecutablePath, PUPPETEER_VPS_ARGS } from "./puppeteer-pool"
 
 const toPersianDigits = (num: string | number | undefined | null) => {
@@ -9,11 +9,21 @@ const toPersianDigits = (num: string | number | undefined | null) => {
   return num.toString().replace(/\d/g, (x) => persianDigits[parseInt(x)])
 }
 
-function getBase64Asset(assetPath: string, mimeType: string) {
+function getAssetDataUri(assetPathOrUrl: string | null | undefined, defaultMime = "image/png"): string {
+  if (!assetPathOrUrl) return ""
+  if (assetPathOrUrl.startsWith("data:")) return assetPathOrUrl
   try {
-    const fullPath = path.join(process.cwd(), "public", assetPath)
+    const cleanPath = assetPathOrUrl.replace(/^[/\\]+/, "")
+    const fullPath = path.join(process.cwd(), "public", cleanPath)
+    if (!fs.existsSync(fullPath)) return ""
     const fileBuffer = fs.readFileSync(fullPath)
-    return `data:${mimeType};base64,${fileBuffer.toString("base64")}`
+    const ext = path.extname(cleanPath).toLowerCase()
+    let mime = defaultMime
+    if (ext === ".svg") mime = "image/svg+xml"
+    else if (ext === ".webp") mime = "image/webp"
+    else if (ext === ".jpg" || ext === ".jpeg") mime = "image/jpeg"
+    else if (ext === ".png") mime = "image/png"
+    return `data:${mime};base64,${fileBuffer.toString("base64")}`
   } catch (e) {
     return ""
   }
@@ -80,12 +90,14 @@ function getGroupedRowsForDay(rawExercises: any[]): GroupedRow[] {
 }
 
 export async function generateRoutinePdfBuffer(routine: any, client?: any, trainer?: any): Promise<Buffer> {
-  const logoBase64 = getBase64Asset("NutriTrain.png", "image/png")
-  const vazirRegBase64 = getBase64Asset("fonts/Vazirmatn-Regular.woff2", "font/woff2")
-  const vazirBoldBase64 = getBase64Asset("fonts/Vazirmatn-Bold.woff2", "font/woff2")
-  const morabbaMedBase64 = getBase64Asset("fonts/Morabba-Medium.woff2", "font/woff2")
+  const trainerData = trainer || routine.trainer
+  const trainerLogo = getAssetDataUri(trainerData?.logoUrl)
+  const logoBase64 = getAssetDataUri("NutriTrain.png", "image/png")
+  const vazirRegBase64 = getAssetDataUri("fonts/Vazirmatn-Regular.woff2", "font/woff2")
+  const vazirBoldBase64 = getAssetDataUri("fonts/Vazirmatn-Bold.woff2", "font/woff2")
+  const morabbaMedBase64 = getAssetDataUri("fonts/Morabba-Medium.woff2", "font/woff2")
 
-  const trainerName = trainer?.name || routine.trainer?.name || "مربی تخصصی NutriTrain"
+  const trainerName = trainerData?.name || "مربی تخصصی NutriTrain"
 
   const groupBadgesMap: Record<string, string> = {
     SUPERSET: "سوپرست",
@@ -140,13 +152,13 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
           ) || "—"
 
           return `
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-              <td style="text-align: center; font-weight: bold; color: #64748b; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${toPersianDigits(idx + 1)}</td>
+            <tr style="border-bottom: 1px solid #e2e8f0; background-color: ${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
+              <td style="text-align: center; font-weight: bold; color: #64748b; padding: 6px 4px; border-left: 1px solid #e2e8f0; white-space: nowrap;">${toPersianDigits(idx + 1)}</td>
               <td style="text-align: right; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${exNameHtml}</td>
-              <td style="text-align: center; font-weight: bold; color: #1e293b; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${toPersianDigits(mainEx.sets || 3)}</td>
-              <td style="text-align: center; font-weight: bold; color: #334155; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${repsHtml}</td>
-              <td style="text-align: center; font-weight: bold; color: #475569; padding: 6px 8px; border-left: 1px solid #e2e8f0;">${toPersianDigits(cleanedRest)}</td>
-              <td style="text-align: right; color: #64748b; padding: 6px 8px;">${notesHtml}</td>
+              <td style="text-align: center; font-weight: bold; color: #1e293b; padding: 6px 4px; border-left: 1px solid #e2e8f0; white-space: nowrap;">${toPersianDigits(mainEx.sets || 3)}</td>
+              <td style="text-align: center; font-weight: 600; color: #334155; padding: 6px 4px; border-left: 1px solid #e2e8f0; white-space: nowrap;">${repsHtml}</td>
+              <td style="text-align: center; font-weight: 600; color: #475569; padding: 6px 4px; border-left: 1px solid #e2e8f0; white-space: nowrap;">${toPersianDigits(cleanedRest)}</td>
+              <td style="text-align: right; color: #475569; font-size: 10px; line-height: 1.5; padding: 6px 8px;">${notesHtml}</td>
             </tr>
           `
         })
@@ -160,23 +172,23 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
         ${
           groupedRows.length > 0
             ? `
-          <table style="width: 100%; table-layout: fixed; border-collapse: collapse; text-align: right; font-size: 11px;">
+          <table style="width: 100%; table-layout: auto; border-collapse: collapse; text-align: right; font-size: 11px;">
             <colgroup>
-              <col style="width: 5%;" />
-              <col style="width: 33%;" />
-              <col style="width: 7%;" />
-              <col style="width: 11%;" />
-              <col style="width: 12%;" />
-              <col style="width: 32%;" />
+              <col style="width: 36px;" />
+              <col style="width: 28%;" />
+              <col style="width: 46px;" />
+              <col style="width: 70px;" />
+              <col style="width: 76px;" />
+              <col style="width: auto;" />
             </colgroup>
             <thead>
-              <tr style="background-color: #f8fafc; border-bottom: 1px solid #cbd5e1; color: #475569;">
-                <th style="text-align: center; padding: 6px 8px; border-left: 1px solid #e2e8f0;">#</th>
+              <tr style="background-color: #f1f5f9; border-bottom: 1px solid #cbd5e1; color: #334155;">
+                <th style="text-align: center; padding: 6px 4px; border-left: 1px solid #e2e8f0; white-space: nowrap;">#</th>
                 <th style="text-align: right; padding: 6px 8px; border-left: 1px solid #e2e8f0;">نام حرکت</th>
-                <th style="text-align: center; padding: 6px 8px; border-left: 1px solid #e2e8f0;">ست</th>
-                <th style="text-align: center; padding: 6px 8px; border-left: 1px solid #e2e8f0;">تکرار</th>
-                <th style="text-align: center; padding: 6px 8px; border-left: 1px solid #e2e8f0;">استراحت</th>
-                <th style="text-align: right; padding: 6px 8px;">توضیحات</th>
+                <th style="text-align: center; padding: 6px 4px; border-left: 1px solid #e2e8f0; white-space: nowrap;">ست</th>
+                <th style="text-align: center; padding: 6px 4px; border-left: 1px solid #e2e8f0; white-space: nowrap;">تکرار</th>
+                <th style="text-align: center; padding: 6px 4px; border-left: 1px solid #e2e8f0; white-space: nowrap;">استراحت</th>
+                <th style="text-align: right; padding: 6px 8px;">توضیحات و نکات اجرایی</th>
               </tr>
             </thead>
             <tbody>
@@ -223,8 +235,8 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
         .header {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          padding-bottom: 12px;
+          align-items: flex-end;
+          padding-bottom: 8px;
           margin-bottom: 4px;
         }
         .right-header {
@@ -233,8 +245,8 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
           gap: 12px;
         }
         .logo {
-          height: 48px;
-          width: 176px;
+          max-height: 48px;
+          max-width: 140px;
           object-fit: contain;
         }
         .trainer-meta {
@@ -269,21 +281,28 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
       </style>
     </head>
     <body>
-      <div class="header" style="display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 8px;">
+      <div class="header">
         <div style="display: flex; flex-direction: column; gap: 8px; text-align: right;">
-          <div class="right-header" style="display: flex; align-items: center; gap: 12px;">
-            ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="NutriTrain Logo" style="height: 40px; width: 144px; object-fit: contain;" />` : `<h2 style="font-family: 'Morabba'; font-size: 20px; color: #065f46;">NutriTrain</h2>`}
-            <div style="display: flex; flex-direction: column; text-align: right; border-right: 2px solid #059669; padding-right: 10px; margin-right: 8px;">
+          <div class="right-header">
+            ${
+              trainerLogo
+                ? `<img src="${trainerLogo}" class="logo" alt="${trainerName}" style="border-radius: 6px;" />`
+                : logoBase64
+                ? `<img src="${logoBase64}" class="logo" alt="NutriTrain Logo" style="height: 40px; width: 144px;" />`
+                : `<h2 style="font-family: 'Morabba'; font-size: 20px; color: #065f46;">NutriTrain</h2>`
+            }
+            <div style="display: flex; flex-direction: column; text-align: right; border-right: 2px solid #059669; padding-right: 10px; margin-right: 6px;">
               <span style="font-family: 'Morabba', serif; font-size: 14px; font-weight: 800; color: #0f172a; line-height: 1.2; white-space: nowrap;">${trainerName}</span>
-              <span style="font-family: 'Vazirmatn', sans-serif; font-size: 9px; font-weight: 700; color: #047857; margin-top: 2px; white-space: nowrap;">مربی رسمی فدراسیون بدنسازی و پرورش اندام</span>
+              <span style="font-family: 'Vazirmatn', sans-serif; font-size: 9px; font-weight: 700; color: #047857; margin-top: 2px; white-space: nowrap;">${trainerData?.bio ? toPersianDigits(trainerData.bio) : "مربی رسمی فدراسیون بدنسازی و پرورش اندام"}</span>
             </div>
           </div>
         </div>
 
         <div class="trainer-meta" style="display: flex; flex-direction: column; align-items: flex-end; text-align: left;">
           <div class="title" style="font-family: 'Morabba', serif; font-size: 18px; font-weight: 800; color: #0f172a; white-space: nowrap;">${toPersianDigits(routine.title)}</div>
-          <div style="font-family: 'Vazirmatn', sans-serif; font-size: 10px; font-weight: 700; color: #64748b; margin-top: 2px; white-space: nowrap;">
-            تاریخ صدور: ${toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(routine.createdAt)))}
+          <div style="display: flex; align-items: center; gap: 6px; font-family: 'Vazirmatn', sans-serif; font-size: 10px; font-weight: 700; color: #64748b; margin-top: 2px; white-space: nowrap;">
+            <span>تاریخ صدور: ${toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(routine.createdAt)))}</span>
+            ${trainerLogo && logoBase64 ? `<span style="color: #cbd5e1;">•</span><span style="color: #047857;">سامانه NutriTrain</span>` : ""}
           </div>
         </div>
       </div>
@@ -350,11 +369,20 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
   } catch (poolErr) {
     console.warn("Puppeteer pool fallback activated for routine PDF:", poolErr)
     const execPath = getExecutablePath()
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: PUPPETEER_VPS_ARGS,
-      ...(execPath ? { executablePath: execPath } : {}),
-    })
+    let browser: Browser
+    try {
+      browser = await puppeteer.launch({
+        headless: "shell",
+        args: PUPPETEER_VPS_ARGS,
+        ...(execPath ? { executablePath: execPath } : {}),
+      })
+    } catch {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: PUPPETEER_VPS_ARGS,
+        ...(execPath ? { executablePath: execPath } : {}),
+      })
+    }
     try {
       const page = await browser.newPage()
       await page.setContent(html, { waitUntil: "domcontentloaded" })
@@ -370,15 +398,15 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
   }
 }
 
-
-
 export async function generateDietPdfBuffer(diet: any, client?: any, trainer?: any): Promise<Buffer> {
-  const logoBase64 = getBase64Asset("NutriTrain.png", "image/png")
-  const vazirRegBase64 = getBase64Asset("fonts/Vazirmatn-Regular.woff2", "font/woff2")
-  const vazirBoldBase64 = getBase64Asset("fonts/Vazirmatn-Bold.woff2", "font/woff2")
-  const morabbaMedBase64 = getBase64Asset("fonts/Morabba-Medium.woff2", "font/woff2")
+  const trainerData = trainer || diet.trainer
+  const trainerLogo = getAssetDataUri(trainerData?.logoUrl)
+  const logoBase64 = getAssetDataUri("NutriTrain.png", "image/png")
+  const vazirRegBase64 = getAssetDataUri("fonts/Vazirmatn-Regular.woff2", "font/woff2")
+  const vazirBoldBase64 = getAssetDataUri("fonts/Vazirmatn-Bold.woff2", "font/woff2")
+  const morabbaMedBase64 = getAssetDataUri("fonts/Morabba-Medium.woff2", "font/woff2")
 
-  const trainerName = trainer?.name || diet.trainer?.name || "مربی تخصصی NutriTrain"
+  const trainerName = trainerData?.name || "مربی تخصصی NutriTrain"
 
   const html = `
     <!DOCTYPE html>
@@ -426,17 +454,50 @@ export async function generateDietPdfBuffer(diet: any, client?: any, trainer?: a
           color: #334155;
           margin-top: 16px;
         }
+        .diet-content table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 12px 0;
+          font-size: 11px;
+          table-layout: auto;
+          page-break-inside: avoid;
+        }
+        .diet-content th {
+          background-color: #f0fdf4;
+          padding: 6px 10px;
+          border: 1px solid #cbd5e1;
+          font-weight: bold;
+          white-space: nowrap;
+          text-align: right;
+        }
+        .diet-content td {
+          padding: 6px 10px;
+          border: 1px solid #e2e8f0;
+          vertical-align: middle;
+          text-align: right;
+        }
       </style>
     </head>
     <body>
       <div class="header">
         <div style="display: flex; align-items: center; gap: 12px;">
-          ${logoBase64 ? `<img src="${logoBase64}" style="height: 48px; width: 176px; object-fit: contain;" alt="NutriTrain Logo" />` : `<div style="display: flex; flex-direction: column; text-align: right;"><h2 style="font-family: 'Morabba'; font-size: 20px; font-weight: 900; color: #115e59; margin: 0;">NutriTrain</h2><span style="font-size: 10px; font-weight: 700; color: #64748b; margin-top: 2px;">سامانه هوشمند برنامه‌ریزی تغذیه</span></div>`}
+          ${
+            trainerLogo
+              ? `<img src="${trainerLogo}" style="max-height: 48px; max-width: 140px; object-fit: contain; border-radius: 6px;" alt="${trainerName}" />`
+              : logoBase64
+              ? `<img src="${logoBase64}" style="height: 48px; width: 176px; object-fit: contain;" alt="NutriTrain Logo" />`
+              : `<div style="display: flex; flex-direction: column; text-align: right;"><h2 style="font-family: 'Morabba'; font-size: 20px; font-weight: 900; color: #115e59; margin: 0;">NutriTrain</h2><span style="font-size: 10px; font-weight: 700; color: #64748b; margin-top: 2px;">سامانه هوشمند برنامه‌ریزی تغذیه</span></div>`
+          }
+          <div style="display: flex; flex-direction: column; text-align: right; border-right: 2px solid #0d9488; padding-right: 10px; margin-right: 6px;">
+            <span style="font-family: 'Morabba', serif; font-size: 14px; font-weight: 800; color: #0f172a; line-height: 1.2; white-space: nowrap;">${trainerName}</span>
+            <span style="font-family: 'Vazirmatn', sans-serif; font-size: 9px; font-weight: 700; color: #0d9488; margin-top: 2px; white-space: nowrap;">${trainerData?.bio ? toPersianDigits(trainerData.bio) : "مشاور تخصصی تغذیه ورزشی و مربیگری"}</span>
+          </div>
         </div>
         <div style="display: flex; flex-direction: column; align-items: flex-end; text-align: left;">
           <div class="title" style="font-family: 'Morabba', serif; font-size: 18px; font-weight: 800; color: #0f172a; white-space: nowrap;">${toPersianDigits(diet.title)}</div>
-          <div style="font-family: 'Vazirmatn', sans-serif; font-size: 10px; font-weight: 700; color: #64748b; margin-top: 2px; white-space: nowrap;">
-            تاریخ صدور: ${toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(diet.createdAt)))}
+          <div style="display: flex; align-items: center; gap: 6px; font-family: 'Vazirmatn', sans-serif; font-size: 10px; font-weight: 700; color: #64748b; margin-top: 2px; white-space: nowrap;">
+            <span>تاریخ صدور: ${toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(diet.createdAt)))}</span>
+            ${trainerLogo && logoBase64 ? `<span style="color: #cbd5e1;">•</span><span style="color: #0f766e;">سامانه NutriTrain</span>` : ""}
           </div>
         </div>
       </div>
@@ -483,11 +544,20 @@ export async function generateDietPdfBuffer(diet: any, client?: any, trainer?: a
   } catch (poolErr) {
     console.warn("Puppeteer pool fallback activated for diet PDF:", poolErr)
     const execPath = getExecutablePath()
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: PUPPETEER_VPS_ARGS,
-      ...(execPath ? { executablePath: execPath } : {}),
-    })
+    let browser: Browser
+    try {
+      browser = await puppeteer.launch({
+        headless: "shell",
+        args: PUPPETEER_VPS_ARGS,
+        ...(execPath ? { executablePath: execPath } : {}),
+      })
+    } catch {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: PUPPETEER_VPS_ARGS,
+        ...(execPath ? { executablePath: execPath } : {}),
+      })
+    }
     try {
       const page = await browser.newPage()
       await page.setContent(html, { waitUntil: "domcontentloaded" })
@@ -502,5 +572,6 @@ export async function generateDietPdfBuffer(diet: any, client?: any, trainer?: a
     }
   }
 }
+
 
 

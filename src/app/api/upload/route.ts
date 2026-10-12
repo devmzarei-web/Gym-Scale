@@ -32,19 +32,22 @@ export async function POST(req: Request) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Ensure uploads/gifs directory exists
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "gifs")
+    const folderParam = String(formData.get("folder") || formData.get("type") || "gifs").toLowerCase()
+    const targetFolder = ["logo", "logos"].includes(folderParam) ? "logos" : "gifs"
+
+    // Ensure upload directory exists
+    const uploadDir = path.join(process.cwd(), "public", "uploads", targetFolder)
     await mkdir(uploadDir, { recursive: true })
 
-    // Generate unique filename
-    const ext = path.extname(file.name) || ".gif"
-    const safeExt = ext.match(/^\.(gif|webp|png|jpg|jpeg)$/i) ? ext.toLowerCase() : ".gif"
+    // Generate unique filename with valid extension
+    const ext = path.extname(file.name).toLowerCase()
+    const safeExt = ext.match(/^\.(svg|png|jpg|jpeg|webp|gif)$/i) ? ext : targetFolder === "logos" ? ".png" : ".gif"
     const fileName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}${safeExt}`
     const filePath = path.join(uploadDir, fileName)
 
     await writeFile(filePath, buffer)
 
-    const publicUrl = `/uploads/gifs/${fileName}`
+    const publicUrl = `/uploads/${targetFolder}/${fileName}`
     return NextResponse.json({ success: true, url: publicUrl })
   } catch (error: any) {
     console.error("Upload error:", error)

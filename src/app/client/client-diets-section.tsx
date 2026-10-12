@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Utensils, FileText, Layers, X, ChevronLeft } from "lucide-react"
+import { Utensils, Layers, X, ChevronLeft } from "lucide-react"
+import { DownloadPdfButton } from "@/components/download-pdf-button"
 
 interface ClientDietsSectionProps {
   assignedDiets: any[]
@@ -84,14 +85,13 @@ export function ClientDietsSection({ assignedDiets, clientId }: ClientDietsSecti
               <ChevronLeft className="h-4 w-4" />
             </Link>
 
-            <a
-              href={`/api/diets/${activeDiet.id}/pdf?clientId=${clientId}`}
-              download
-              className="w-full flex items-center justify-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold py-3 px-4 rounded-xl transition-all"
-            >
-              <FileText className="h-4 w-4 text-teal-600" />
-              دانلود مستقیم PDF
-            </a>
+            <DownloadPdfButton
+              url={`/api/diets/${activeDiet.id}/pdf?clientId=${clientId}`}
+              previewUrl={`/diets/${activeDiet.id}/pdf?clientId=${clientId}`}
+              fileName={`NutriTrain-${activeDiet.title}.pdf`}
+              label="دانلود مستقیم PDF"
+              className="w-full flex items-center justify-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold py-3 px-4 rounded-xl transition-all disabled:opacity-50"
+            />
           </div>
         </div>
       </div>
@@ -142,14 +142,13 @@ export function ClientDietsSection({ assignedDiets, clientId }: ClientDietsSecti
                       <ChevronLeft className="h-3.5 w-3.5" />
                     </Link>
 
-                    <a
-                      href={`/api/diets/${diet.id}/pdf?clientId=${clientId}`}
-                      download
-                      className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold py-2.5 px-3 rounded-xl transition-all"
-                    >
-                      <FileText className="h-3.5 w-3.5 text-teal-600" />
-                      دانلود مستقیم PDF
-                    </a>
+                    <DownloadPdfButton
+                      url={`/api/diets/${diet.id}/pdf?clientId=${clientId}`}
+                      previewUrl={`/diets/${diet.id}/pdf?clientId=${clientId}`}
+                      fileName={`NutriTrain-${diet.title}.pdf`}
+                      label="دانلود مستقیم PDF"
+                      className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold py-2.5 px-3 rounded-xl transition-all disabled:opacity-50"
+                    />
                   </div>
                 </div>
               ))}

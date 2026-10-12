@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Dumbbell, Play, FileText, Layers, X, ChevronLeft } from "lucide-react"
+import { Dumbbell, Play, Layers, X, ChevronLeft } from "lucide-react"
+import { DownloadPdfButton } from "@/components/download-pdf-button"
 
 interface ClientRoutinesSectionProps {
   assignedRoutines: any[]
@@ -88,14 +89,13 @@ export function ClientRoutinesSection({ assignedRoutines, clientId }: ClientRout
               شروع تمرین زنده
             </Link>
 
-            <a
-              href={`/api/routines/${activeRoutine.id}/pdf?clientId=${clientId}`}
-              download
-              className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold py-3 px-4 rounded-xl transition-all"
-            >
-              <FileText className="h-4 w-4 text-emerald-600" />
-              دانلود مستقیم PDF
-            </a>
+            <DownloadPdfButton
+              url={`/api/routines/${activeRoutine.id}/pdf?clientId=${clientId}`}
+              previewUrl={`/routines/${activeRoutine.id}/pdf?clientId=${clientId}`}
+              fileName={`NutriTrain-${activeRoutine.title}.pdf`}
+              label="دانلود مستقیم PDF"
+              className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold py-3 px-4 rounded-xl transition-all disabled:opacity-50"
+            />
           </div>
         </div>
       </div>
@@ -149,14 +149,13 @@ export function ClientRoutinesSection({ assignedRoutines, clientId }: ClientRout
                       شروع تمرین زنده
                     </Link>
 
-                    <a
-                      href={`/api/routines/${routine.id}/pdf?clientId=${clientId}`}
-                      download
-                      className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold py-2.5 px-3 rounded-xl transition-all"
-                    >
-                      <FileText className="h-3.5 w-3.5 text-emerald-600" />
-                      دانلود مستقیم PDF
-                    </a>
+                    <DownloadPdfButton
+                      url={`/api/routines/${routine.id}/pdf?clientId=${clientId}`}
+                      previewUrl={`/routines/${routine.id}/pdf?clientId=${clientId}`}
+                      fileName={`NutriTrain-${routine.title}.pdf`}
+                      label="دانلود مستقیم PDF"
+                      className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold py-2.5 px-3 rounded-xl transition-all disabled:opacity-50"
+                    />
                   </div>
                 </div>
               ))}

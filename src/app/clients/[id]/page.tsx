@@ -15,6 +15,7 @@ import { TdeeCalculatorModal } from "@/components/tdee-calculator-modal"
 import { ClientProgressChart } from "@/components/client-progress-chart"
 import { ProgressPhotoGallery } from "@/components/progress-photo-gallery"
 import { RevokeSubscriptionButton } from "./revoke-subscription-button"
+import { DownloadPdfButton } from "@/components/download-pdf-button"
 
 export const revalidate = 0
 
@@ -280,13 +281,12 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                           مشاهده جزئیات
                           <ArrowRight className="h-3.5 w-3.5 rotate-180" />
                         </Link>
-                        <a
-                          href={`/api/routines/${routine.id}/pdf?clientId=${client.id}`}
-                          download
-                          className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
-                        >
-                          دانلود PDF
-                        </a>
+                        <DownloadPdfButton
+                          url={`/api/routines/${routine.id}/pdf?clientId=${client.id}`}
+                          previewUrl={`/routines/${routine.id}/pdf?clientId=${client.id}`}
+                          fileName={`NutriTrain-${routine.title.replace(/\s+/g, "_")}.pdf`}
+                          className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                        />
                       </div>
                       <UnassignRoutineButton historyId={historyItem.id} clientId={client.id} />
                     </div>
@@ -349,13 +349,12 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                           مشاهده جزئیات
                           <ArrowRight className="h-3.5 w-3.5 rotate-180" />
                         </Link>
-                        <a
-                          href={`/api/diets/${diet.id}/pdf?clientId=${client.id}`}
-                          download
-                          className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
-                        >
-                          دانلود PDF
-                        </a>
+                        <DownloadPdfButton
+                          url={`/api/diets/${diet.id}/pdf?clientId=${client.id}`}
+                          previewUrl={`/diets/${diet.id}/pdf?clientId=${client.id}`}
+                          fileName={`NutriTrain-${diet.title.replace(/\s+/g, "_")}.pdf`}
+                          className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                        />
                       </div>
                       <UnassignDietButton historyId={historyItem.id} clientId={client.id} />
                     </div>

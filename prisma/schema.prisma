@@ -53,6 +53,7 @@ model Trainer {
   password          String    @default("$2a$10$e7eGfT3F...placeholder") // Bcrypt hash
   phone             String?
   avatarUrl         String?
+  logoUrl           String?
   bio               String?
   role              Role      @default(TRAINER)
   isApproved        Boolean   @default(true)

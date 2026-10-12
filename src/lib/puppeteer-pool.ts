@@ -31,11 +31,35 @@ export const PUPPETEER_VPS_ARGS = [
   "--disable-setuid-sandbox",
   "--disable-dev-shm-usage",
   "--disable-gpu",
+  "--disable-software-rasterizer",
   "--no-first-run",
   "--no-zygote",
   "--single-process",
   "--disable-extensions",
+  "--disable-crash-reporter",
+  "--crash-dumps-dir=/tmp",
+  "--disable-features=CrashReporting,site-per-process,IsolateOrigins",
+  "--disable-background-networking",
+  "--disable-default-apps",
+  "--disable-sync",
+  "--disable-translate",
+  "--hide-scrollbars",
+  "--metrics-recording-only",
+  "--mute-audio",
+  "--safebrowsing-disable-auto-update",
 ]
+
+async function launchBrowserWithOptions(headlessMode: "shell" | boolean): Promise<Browser> {
+  const execPath = getExecutablePath()
+  const launchOptions: any = {
+    headless: headlessMode,
+    args: PUPPETEER_VPS_ARGS,
+  }
+  if (execPath) {
+    launchOptions.executablePath = execPath
+  }
+  return puppeteer.launch(launchOptions)
+}
 
 async function initBrowser(): Promise<Browser> {
   if (browserInstance && browserInstance.connected) {
@@ -46,27 +70,35 @@ async function initBrowser(): Promise<Browser> {
     return launchPromise
   }
 
-  const execPath = getExecutablePath()
-  const launchOptions: any = {
-    headless: true,
-    args: PUPPETEER_VPS_ARGS,
-  }
-  if (execPath) {
-    launchOptions.executablePath = execPath
-  }
+  launchPromise = (async () => {
+    try {
+      // Primary attempt: headless "shell" completely disables Crashpad and CPU inspection
+      const browser = await launchBrowserWithOptions("shell")
+      browserInstance = browser
+      launchPromise = null
+      resetIdleTimer()
 
-  launchPromise = puppeteer.launch(launchOptions).then((browser) => {
-    browserInstance = browser
-    launchPromise = null
-    resetIdleTimer()
+      browser.once("disconnected", () => {
+        browserInstance = null
+        if (idleTimer) clearTimeout(idleTimer)
+      })
 
-    browser.once("disconnected", () => {
-      browserInstance = null
-      if (idleTimer) clearTimeout(idleTimer)
-    })
+      return browser
+    } catch (shellErr) {
+      console.warn("Headless shell launch failed, attempting standard headless boolean fallback:", shellErr)
+      const browser = await launchBrowserWithOptions(true)
+      browserInstance = browser
+      launchPromise = null
+      resetIdleTimer()
 
-    return browser
-  }).catch((err) => {
+      browser.once("disconnected", () => {
+        browserInstance = null
+        if (idleTimer) clearTimeout(idleTimer)
+      })
+
+      return browser
+    }
+  })().catch((err) => {
     launchPromise = null
     throw err
   })

@@ -25,15 +25,26 @@ const toPersianDigitsInHTML = (html: string | undefined | null) => {
     .join("")
 }
 
-function getBase64Asset(assetPath: string, mimeType: string) {
+function getAssetDataUri(assetPathOrUrl: string | null | undefined, defaultMime = "image/png"): string {
+  if (!assetPathOrUrl) return ""
+  if (assetPathOrUrl.startsWith("data:")) return assetPathOrUrl
   try {
-    const fullPath = path.join(process.cwd(), "public", assetPath)
+    const cleanPath = assetPathOrUrl.replace(/^[/\\]+/, "")
+    const fullPath = path.join(process.cwd(), "public", cleanPath)
+    if (!fs.existsSync(fullPath)) return ""
     const fileBuffer = fs.readFileSync(fullPath)
-    return `data:${mimeType};base64,${fileBuffer.toString("base64")}`
+    const ext = path.extname(cleanPath).toLowerCase()
+    let mime = defaultMime
+    if (ext === ".svg") mime = "image/svg+xml"
+    else if (ext === ".webp") mime = "image/webp"
+    else if (ext === ".jpg" || ext === ".jpeg") mime = "image/jpeg"
+    else if (ext === ".png") mime = "image/png"
+    return `data:${mime};base64,${fileBuffer.toString("base64")}`
   } catch (e) {
     return ""
   }
 }
+
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -66,10 +77,12 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
   const dateStr = new Date(diet.createdAt).toLocaleDateString("fa-IR").replace(/\//g, "-")
   const pdfFileName = `NutriTrain.ir-${trainerName}-${clientOrTitle}-${dateStr}`
 
-  const logoBase64 = getBase64Asset("NutriTrain.png", "image/png")
-  const vazirRegBase64 = getBase64Asset("fonts/Vazirmatn-Regular.woff2", "font/woff2")
-  const vazirBoldBase64 = getBase64Asset("fonts/Vazirmatn-Bold.woff2", "font/woff2")
-  const morabbaMedBase64 = getBase64Asset("fonts/Morabba-Medium.woff2", "font/woff2")
+  const trainer = diet.trainer
+  const trainerLogo = getAssetDataUri(trainer?.logoUrl)
+  const logoBase64 = getAssetDataUri("NutriTrain.png", "image/png")
+  const vazirRegBase64 = getAssetDataUri("fonts/Vazirmatn-Regular.woff2", "font/woff2")
+  const vazirBoldBase64 = getAssetDataUri("fonts/Vazirmatn-Bold.woff2", "font/woff2")
+  const morabbaMedBase64 = getAssetDataUri("fonts/Morabba-Medium.woff2", "font/woff2")
 
   return (
     <div className="bg-white text-slate-900" dir="rtl">
@@ -186,19 +199,25 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
           border-collapse: collapse;
           margin: 10px 0;
           font-size: 11px;
+          table-layout: auto;
           break-inside: avoid;
           page-break-inside: avoid;
         }
 
         .diet-content th {
           background-color: #f0fdf4;
-          padding: 6px 8px;
+          padding: 6px 10px;
           border: 1px solid #cbd5e1;
+          font-weight: bold;
+          white-space: nowrap;
+          text-align: right;
         }
 
         .diet-content td {
-          padding: 6px 8px;
+          padding: 6px 10px;
           border: 1px solid #e2e8f0;
+          vertical-align: middle;
+          text-align: right;
         }
       `,
         }}
@@ -221,7 +240,13 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
           <div className="flex justify-between items-end pb-2">
             {/* Right Side: Logo & Brand */}
             <div className="flex items-center gap-3">
-              {logoBase64 ? (
+              {trainerLogo ? (
+                <img
+                  src={trainerLogo}
+                  alt={trainer?.name || "لوگوی مربی"}
+                  className="max-h-12 max-w-[140px] object-contain rounded-md"
+                />
+              ) : logoBase64 ? (
                 <img src={logoBase64} alt="NutriTrain Logo" className="w-44 h-12 object-contain" />
               ) : (
                 <div className="flex flex-col text-right pdf-header-text">
@@ -229,14 +254,29 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
                   <p className="text-[10px] font-bold text-slate-500 mt-0.5">سامانه هوشمند برنامه‌ریزی تغذیه</p>
                 </div>
               )}
+
+              <div className="flex flex-col text-right pr-3 border-r-2 border-teal-600/40">
+                <span className="text-sm font-extrabold text-slate-900 leading-tight pdf-header-text whitespace-nowrap">
+                  {trainer?.name || "مربی"}
+                </span>
+                <span className="text-[9px] font-bold text-teal-700 mt-0.5 tracking-wide pdf-body whitespace-nowrap">
+                  {trainer?.bio ? toPersianDigits(trainer.bio) : "مشاور تخصصی تغذیه ورزشی و مربیگری"}
+                </span>
+              </div>
             </div>
 
             {/* Left Side: Diet Title & Date */}
             <div className="flex flex-col gap-0.5 items-end text-left pdf-header-text">
               <h1 className="text-lg font-extrabold text-slate-900">{toPersianDigits(diet.title)}</h1>
-              <span className="text-[10px] font-bold text-slate-500 pdf-body whitespace-nowrap">
-                تاریخ صدور: {toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(diet.createdAt)))}
-              </span>
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 pdf-body whitespace-nowrap">
+                <span>تاریخ صدور: {toPersianDigits(new Intl.DateTimeFormat("fa-IR").format(new Date(diet.createdAt)))}</span>
+                {trainerLogo && logoBase64 && (
+                  <>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-teal-700 font-semibold">سامانه NutriTrain</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
