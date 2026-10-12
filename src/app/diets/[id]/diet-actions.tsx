@@ -79,46 +79,46 @@ export function DietActions({ dietId, clientId }: { dietId: string; clientId?: s
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
       <Link
         href={printUrl}
         target="_blank"
-        className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs"
+        className="flex items-center justify-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-xs text-center"
         title="مشاهده نسخه چاپی استاندارد و ذخیره مستقیم PDF از مرورگر"
       >
-        <Printer className="h-4 w-4" />
-        چاپ و پیش‌نمایش PDF
+        <Printer className="h-4 w-4 shrink-0" />
+        <span className="whitespace-nowrap">چاپ / پیش‌نمایش</span>
       </Link>
 
       <button
         onClick={handleDownloadPdf}
         disabled={downloading}
-        className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 transition-colors disabled:opacity-50"
+        className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3 py-2.5 rounded-xl border border-slate-200 transition-colors disabled:opacity-50 text-center"
         title="دانلود خودکار فایل PDF از طریق موتور سرور"
       >
         {downloading ? (
-          <Loader2 className="h-4 w-4 animate-spin text-teal-600" />
+          <Loader2 className="h-4 w-4 animate-spin text-teal-600 shrink-0" />
         ) : (
-          <Download className="h-4 w-4 text-teal-600" />
+          <Download className="h-4 w-4 text-teal-600 shrink-0" />
         )}
-        {downloading ? "در حال دریافت..." : "دانلود مستقیم"}
+        <span className="whitespace-nowrap">{downloading ? "دریافت..." : "دانلود مستقیم"}</span>
       </button>
 
       <Link
         href={`/diets/${dietId}/edit`}
-        className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl transition-colors border border-slate-200 shadow-2xs"
+        className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3 py-2.5 rounded-xl transition-colors border border-slate-200 shadow-2xs text-center"
       >
-        <Edit3 className="h-4 w-4 text-slate-600" />
-        ویرایش برنامه
+        <Edit3 className="h-4 w-4 text-slate-600 shrink-0" />
+        <span className="whitespace-nowrap">ویرایش برنامه</span>
       </Link>
 
       <button
         onClick={handleDelete}
         disabled={deleting}
-        className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-rose-200 transition-colors disabled:opacity-50"
+        className="flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold px-3 py-2.5 rounded-xl border border-rose-200 transition-colors disabled:opacity-50 text-center"
       >
-        {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-rose-600" />}
-        حذف برنامه
+        {deleting ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 text-rose-600 shrink-0" />}
+        <span className="whitespace-nowrap">حذف برنامه</span>
       </button>
     </div>
   )

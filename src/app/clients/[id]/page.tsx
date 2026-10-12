@@ -147,7 +147,7 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-heading truncate">{client.name}</h1>
+                <h1 className="text-base sm:text-xl lg:text-2xl font-extrabold text-slate-900 font-heading truncate">{client.name}</h1>
                 {activeSub ? (
                   <span className="text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full shrink-0">
                     اشتراک فعال
@@ -272,33 +272,35 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                     {routine.description && (
                       <p className="text-xs text-slate-600">{routine.description}</p>
                     )}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                      <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-200">
+                      <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
                         <Link
                           href={`/routines/${routine.id}`}
-                          className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 bg-white border border-slate-200 px-3 py-2 rounded-xl transition-all"
+                          className="text-xs font-bold text-slate-600 hover:text-slate-800 justify-center flex items-center gap-1 bg-white border border-slate-200 px-3 py-2 rounded-xl transition-all shadow-2xs"
                         >
-                          مشاهده جزئیات
-                          <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                          <span>مشاهده جزئیات</span>
+                          <ArrowRight className="h-3.5 w-3.5 rotate-180 shrink-0" />
                         </Link>
                         <Link
                           href={`/routines/${routine.id}/pdf?clientId=${client.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs font-bold text-emerald-800 hover:text-emerald-900 flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-2 rounded-xl transition-all shadow-2xs"
+                          className="text-xs font-bold text-emerald-800 hover:text-emerald-900 justify-center flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-2 rounded-xl transition-all shadow-2xs"
                           title="مشاهده نسخه استاندارد چاپی و دانلود مستقیم در برگه جدید"
                         >
-                          <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                          <Printer className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                           <span>چاپ و پیش‌نمایش</span>
                         </Link>
                         <DownloadPdfButton
                           url={`/api/routines/${routine.id}/pdf?clientId=${client.id}`}
                           previewUrl={`/routines/${routine.id}/pdf?clientId=${client.id}`}
                           fileName={`NutriTrain-${routine.title.replace(/\s+/g, "_")}.pdf`}
-                          className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                          className="col-span-2 sm:col-auto text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
                         />
                       </div>
-                      <UnassignRoutineButton historyId={historyItem.id} clientId={client.id} />
+                      <div className="self-end sm:self-auto">
+                        <UnassignRoutineButton historyId={historyItem.id} clientId={client.id} />
+                      </div>
                     </div>
                   </div>
                 )
@@ -350,33 +352,35 @@ export default async function ClientDetailPage({ params }: ClientPageProps) {
                     {diet.description && (
                       <p className="text-xs text-slate-600">{diet.description}</p>
                     )}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
-                      <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-200">
+                      <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
                         <Link
                           href={`/diets/${diet.id}`}
-                          className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 bg-white border border-slate-200 px-3 py-2 rounded-xl transition-all"
+                          className="text-xs font-bold text-slate-600 hover:text-slate-800 justify-center flex items-center gap-1 bg-white border border-slate-200 px-3 py-2 rounded-xl transition-all shadow-2xs"
                         >
-                          مشاهده جزئیات
-                          <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                          <span>مشاهده جزئیات</span>
+                          <ArrowRight className="h-3.5 w-3.5 rotate-180 shrink-0" />
                         </Link>
                         <Link
                           href={`/diets/${diet.id}/pdf?clientId=${client.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs font-bold text-teal-800 hover:text-teal-900 flex items-center gap-1.5 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-2 rounded-xl transition-all shadow-2xs"
+                          className="text-xs font-bold text-teal-800 hover:text-teal-900 justify-center flex items-center gap-1.5 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-2 rounded-xl transition-all shadow-2xs"
                           title="مشاهده نسخه استاندارد چاپی و دانلود مستقیم در برگه جدید"
                         >
-                          <Printer className="h-3.5 w-3.5 text-teal-600" />
+                          <Printer className="h-3.5 w-3.5 text-teal-600 shrink-0" />
                           <span>چاپ و پیش‌نمایش</span>
                         </Link>
                         <DownloadPdfButton
                           url={`/api/diets/${diet.id}/pdf?clientId=${client.id}`}
                           previewUrl={`/diets/${diet.id}/pdf?clientId=${client.id}`}
                           fileName={`NutriTrain-${diet.title.replace(/\s+/g, "_")}.pdf`}
-                          className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                          className="col-span-2 sm:col-auto text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
                         />
                       </div>
-                      <UnassignDietButton historyId={historyItem.id} clientId={client.id} />
+                      <div className="self-end sm:self-auto">
+                        <UnassignDietButton historyId={historyItem.id} clientId={client.id} />
+                      </div>
                     </div>
                   </div>
                 )

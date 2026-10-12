@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation"
+import Link from "next/link"
 import fs from "fs"
 import path from "path"
 import prisma from "@/lib/prisma"
 import { PrintButton } from "@/components/print-button"
 import { AutoPrintTrigger } from "@/components/auto-print-trigger"
+import { ArrowRight } from "lucide-react"
 
 export const revalidate = 0
 
@@ -225,25 +227,38 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
 
       <title>{pdfFileName}</title>
       {/* Top Action Bar (Hidden when printing) */}
-      <div className="no-print bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-md">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-bold">
-            <span className="text-teal-400">پیش‌نمایش سند برنامه تغذیه جهت پرینت و خروجی PDF</span>
+      <div className="no-print bg-slate-900 text-white px-4 py-3 sticky top-0 z-50 shadow-md">
+        <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <Link
+              href={search?.clientId ? `/clients/${search.clientId}` : `/diets/${id}`}
+              className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl transition-colors shrink-0"
+            >
+              <ArrowRight className="h-3.5 w-3.5" />
+              <span>بازگشت به برنامه</span>
+            </Link>
+            <span className="text-teal-400 text-xs font-bold hidden sm:inline">پیش‌نمایش سند برنامه تغذیه جهت پرینت و خروجی PDF</span>
           </div>
           <PrintButton fileName={pdfFileName} />
         </div>
       </div>
 
       {search?.error === "server_engine_fallback" && (
-        <div className="no-print max-w-4xl mx-auto mt-4 mx-4 p-3 rounded-2xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold text-center flex items-center justify-center gap-2 shadow-xs">
+        <div className="no-print max-w-4xl mx-auto mt-3 mx-4 p-3 rounded-2xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold text-center flex items-center justify-center gap-2 shadow-xs">
           <span>✨ نسخه استاندارد چاپی لود شد. پنجره چاپ/ذخیره PDF آماده فراخوانی است.</span>
         </div>
       )}
 
       {search?.autoPrint === "true" && <AutoPrintTrigger delay={500} />}
 
-      <div className="w-full bg-white">
-        <div className="max-w-[190mm] mx-auto py-8 px-4 pdf-body">
+      <div className="w-full bg-slate-100 min-h-screen py-4 sm:py-8 overflow-x-auto print:bg-white print:p-0 print:overflow-visible">
+        <div className="min-w-[720px] max-w-[190mm] mx-auto px-2 sm:px-4 print:min-w-0 print:max-w-none print:px-0">
+          {/* Scroll hint for mobile screens */}
+          <div className="no-print sm:hidden text-center text-[11px] font-bold text-slate-500 py-1 mb-2">
+            👈 برای مشاهده کامل جزئیات به چپ و راست اسکرول کنید
+          </div>
+          <div className="w-full bg-white shadow-md sm:rounded-2xl p-6 sm:p-8 print:shadow-none print:rounded-none print:p-0">
+            <div className="w-full pdf-body">
           {/* Header */}
           <div className="flex justify-between items-end pb-2">
             {/* Right Side: Logo & Brand */}
@@ -335,5 +350,7 @@ export default async function DietPdfPage({ params, searchParams }: PageProps) {
         </div>
       </div>
     </div>
+  </div>
+</div>
   )
 }

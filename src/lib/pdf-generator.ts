@@ -368,20 +368,11 @@ export async function generateRoutinePdfBuffer(routine: any, client?: any, train
   } catch (poolErr) {
     console.warn("Puppeteer pool fallback activated for routine PDF:", poolErr)
     const execPath = getExecutablePath()
-    let browser: Browser
-    try {
-      browser = await puppeteer.launch({
-        headless: "shell",
-        args: PUPPETEER_VPS_ARGS,
-        ...(execPath ? { executablePath: execPath } : {}),
-      })
-    } catch {
-      browser = await puppeteer.launch({
-        headless: true,
-        args: PUPPETEER_VPS_ARGS,
-        ...(execPath ? { executablePath: execPath } : {}),
-      })
-    }
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: PUPPETEER_VPS_ARGS,
+      ...(execPath ? { executablePath: execPath } : {}),
+    })
     try {
       const page = await browser.newPage()
       await page.setContent(html, { waitUntil: "domcontentloaded" })
@@ -543,20 +534,11 @@ export async function generateDietPdfBuffer(diet: any, client?: any, trainer?: a
   } catch (poolErr) {
     console.warn("Puppeteer pool fallback activated for diet PDF:", poolErr)
     const execPath = getExecutablePath()
-    let browser: Browser
-    try {
-      browser = await puppeteer.launch({
-        headless: "shell",
-        args: PUPPETEER_VPS_ARGS,
-        ...(execPath ? { executablePath: execPath } : {}),
-      })
-    } catch {
-      browser = await puppeteer.launch({
-        headless: true,
-        args: PUPPETEER_VPS_ARGS,
-        ...(execPath ? { executablePath: execPath } : {}),
-      })
-    }
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: PUPPETEER_VPS_ARGS,
+      ...(execPath ? { executablePath: execPath } : {}),
+    })
     try {
       const page = await browser.newPage()
       await page.setContent(html, { waitUntil: "domcontentloaded" })

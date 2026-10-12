@@ -36,8 +36,8 @@ export default async function RoutinesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 font-heading flex items-center gap-2.5">
-            <Dumbbell className="h-7 w-7 text-emerald-600" />
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-heading flex items-center gap-2.5">
+            <Dumbbell className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-600 shrink-0" />
             برنامه‌های تمرینی
           </h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -47,7 +47,7 @@ export default async function RoutinesPage() {
 
         <Link
           href="/routines/new"
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs"
+          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs w-full sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           ایجاد برنامه تمرینی جدید

@@ -49,30 +49,30 @@ export default async function RoutineDetailPage({ params }: RoutinePageProps) {
   return (
     <div className="space-y-8">
       {/* Back button & Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200 no-print">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 no-print">
         <Link
           href="/routines"
-          className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-emerald-700 transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-emerald-700 transition-colors py-1"
         >
-          <ArrowRight className="h-4 w-4" />
-          بازگشت به لیست برنامه‌ها
+          <ArrowRight className="h-4 w-4 shrink-0" />
+          <span>بازگشت به لیست برنامه‌ها</span>
         </Link>
 
         <RoutineActions routineId={routine.id} clientId={assignedClient?.id} />
       </div>
 
       {/* Routine Title Card */}
-      <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-xs">
+      <div className="p-4 sm:p-6 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-extrabold text-slate-900 font-heading">{routine.title}</h1>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-base sm:text-xl lg:text-2xl font-extrabold text-slate-900 font-heading leading-snug">{routine.title}</h1>
               {routine.isTemplate ? (
-                <span className="text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] sm:text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 sm:px-2.5 py-0.5 rounded-full shrink-0">
                   قالب آماده
                 </span>
               ) : assignedClient ? (
-                <span className="text-xs font-semibold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-[11px] sm:text-xs font-semibold bg-slate-100 text-slate-700 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
                   <User className="h-3.5 w-3.5 text-emerald-600" />
                   مخصوص {assignedClient.name}
                 </span>

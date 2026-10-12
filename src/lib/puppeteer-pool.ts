@@ -12,10 +12,10 @@ export function getExecutablePath(): string | undefined {
     return process.env.PUPPETEER_EXECUTABLE_PATH
   }
   const candidates = [
-    "/usr/bin/google-chrome-stable",
-    "/usr/bin/google-chrome",
     "/usr/bin/chromium-browser",
     "/usr/bin/chromium",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/google-chrome",
     "/snap/bin/chromium",
   ]
   for (const candidate of candidates) {
@@ -26,6 +26,7 @@ export function getExecutablePath(): string | undefined {
   return undefined
 }
 
+// Stable VPS Chrome Arguments (Multi-process enabled to allow PDF print threads without crashes)
 export const PUPPETEER_VPS_ARGS = [
   "--no-sandbox",
   "--disable-setuid-sandbox",
@@ -33,12 +34,10 @@ export const PUPPETEER_VPS_ARGS = [
   "--disable-gpu",
   "--disable-software-rasterizer",
   "--no-first-run",
-  "--no-zygote",
-  "--single-process",
   "--disable-extensions",
   "--disable-crash-reporter",
   "--crash-dumps-dir=/tmp",
-  "--disable-features=CrashReporting,site-per-process,IsolateOrigins",
+  "--disable-features=AudioServiceOutOfProcess,IsolateOrigins,site-per-process",
   "--disable-background-networking",
   "--disable-default-apps",
   "--disable-sync",
@@ -49,10 +48,10 @@ export const PUPPETEER_VPS_ARGS = [
   "--safebrowsing-disable-auto-update",
 ]
 
-async function launchBrowserWithOptions(headlessMode: "shell" | boolean): Promise<Browser> {
+async function launchBrowserWithOptions(): Promise<Browser> {
   const execPath = getExecutablePath()
   const launchOptions: any = {
-    headless: headlessMode,
+    headless: true,
     args: PUPPETEER_VPS_ARGS,
   }
   if (execPath) {
@@ -72,8 +71,7 @@ async function initBrowser(): Promise<Browser> {
 
   launchPromise = (async () => {
     try {
-      // Primary attempt: headless "shell" completely disables Crashpad and CPU inspection
-      const browser = await launchBrowserWithOptions("shell")
+      const browser = await launchBrowserWithOptions()
       browserInstance = browser
       launchPromise = null
       resetIdleTimer()
@@ -84,24 +82,13 @@ async function initBrowser(): Promise<Browser> {
       })
 
       return browser
-    } catch (shellErr) {
-      console.warn("Headless shell launch failed, attempting standard headless boolean fallback:", shellErr)
-      const browser = await launchBrowserWithOptions(true)
-      browserInstance = browser
+    } catch (err) {
+      console.error("Puppeteer pool launch error:", err)
       launchPromise = null
-      resetIdleTimer()
-
-      browser.once("disconnected", () => {
-        browserInstance = null
-        if (idleTimer) clearTimeout(idleTimer)
-      })
-
-      return browser
+      browserInstance = null
+      throw err
     }
-  })().catch((err) => {
-    launchPromise = null
-    throw err
-  })
+  })()
 
   return launchPromise
 }
@@ -113,29 +100,38 @@ function resetIdleTimer() {
       try {
         await browserInstance.close()
       } catch (e) {
-        // ignore
+        console.error("Error closing idle PDF browser instance:", e)
+      } finally {
+        browserInstance = null
       }
-      browserInstance = null
     }
   }, IDLE_TIMEOUT_MS)
 }
 
-export async function acquirePdfPage(): Promise<{ browser: Browser; page: Page }> {
+/**
+ * Acquire an isolated Page instance from the shared browser pool
+ */
+export async function acquirePdfPage(): Promise<{ page: Page; browser: Browser }> {
   const browser = await initBrowser()
-  resetIdleTimer()
-
   const page = await browser.newPage()
-  // Set default viewports for clean PDF rendering
-  await page.setViewport({ width: 1200, height: 1600, deviceScaleFactor: 2 })
-  return { browser, page }
+
+  // Optimize page memory and speed
+  await page.setRequestInterception(false)
+  await page.setViewport({ width: 1200, height: 1600 })
+
+  return { page, browser }
 }
 
-export async function releasePdfPage(page: Page) {
+/**
+ * Release and safely close a Page instance back to the pool
+ */
+export async function releasePdfPage(page: Page): Promise<void> {
   try {
-    if (page && !page.isClosed()) {
+    if (!page.isClosed()) {
       await page.close()
     }
   } catch (e) {
-    console.error("Error closing PDF page:", e)
+    console.error("Error releasing PDF page back to pool:", e)
   }
+  resetIdleTimer()
 }

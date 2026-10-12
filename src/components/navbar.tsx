@@ -131,9 +131,11 @@ export function Navbar() {
           })}
         </nav>
 
-        {/* Left Side: User Dropdown & Mobile Hamburger Toggle */}
+        {/* Left Side: User Dropdown (desktop/tablet) & Mobile Hamburger Toggle */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <NavbarUserDropdown />
+          <div className="hidden sm:block">
+            <NavbarUserDropdown />
+          </div>
 
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -167,7 +169,6 @@ export function Navbar() {
       <MobileNavDrawer
         isOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
-        navItems={currentNavItems}
         unreadCount={unreadCount}
         pathname={pathname}
       />

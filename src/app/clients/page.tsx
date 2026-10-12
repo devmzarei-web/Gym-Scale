@@ -47,8 +47,8 @@ export default async function ClientsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 font-heading flex items-center gap-2.5">
-            <Users className="h-7 w-7 text-emerald-600" />
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-heading flex items-center gap-2.5">
+            <Users className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-600 shrink-0" />
             مدیریت شاگردان
           </h1>
           <p className="text-xs text-slate-500 mt-1">

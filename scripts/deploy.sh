@@ -27,6 +27,10 @@ git checkout -- scripts/deploy.sh public/sw.js public/workbox-*.js 2>/dev/null |
 git pull origin main
 
 echo "📦 2. Installing dependencies and headless Chrome for PDF engine..."
+if command -v apt-get >/dev/null 2>&1; then
+    echo "📦 Checking Linux Chromium packages..."
+    apt-get update -qq && apt-get install -y -qq chromium-browser chromium libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 2>/dev/null || true
+fi
 npm install --production=false
 # Ensure Chromium/Chrome is installed for Puppeteer PDF generator
 npx puppeteer browsers install chrome || true
